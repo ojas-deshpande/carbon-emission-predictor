@@ -1,0 +1,32 @@
+# Virtual environments
+venv/
+env/
+.env
+.venv/
+
+# Python cache
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+
+# Auto-generated files
+dashboard_data.json
+uploads/
+index.html
+
+# IDE / Editor
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# OS files
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# Sensitive / secret files
+secrets.py
+*.env
+.env.local

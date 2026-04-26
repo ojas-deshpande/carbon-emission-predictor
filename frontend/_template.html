@@ -1,0 +1,1902 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <meta name="description" content="Interactive global carbon emission dashboard with ML-powered forecasts, country comparisons, and AI-assisted climate analysis for 60+ countries." />
+  <title>Global Carbon Emission Dashboard</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link
+    href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;600&display=swap"
+    rel="stylesheet" />
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/plotly.js/2.27.0/plotly.min.js"></script>
+  <style>
+    *,
+    *::before,
+    *::after {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0
+    }
+
+    :root {
+      --bg: #07090f;
+      --surface: #0d1117;
+      --s2: #131a24;
+      --s3: #192030;
+      --border: #1e2d42;
+      --border2: #263852;
+      --accent: #00e5b0;
+      --accent-d: #00a880;
+      --glow: rgba(0, 229, 176, .13);
+      --red: #ff4060;
+      --amber: #ffbe4d;
+      --blue: #4da6ff;
+      --purple: #a78bfa;
+      --text: #9ab0cc;
+      --texthi: #ddeeff;
+      --textdim: #4a6080;
+      --mono: 'JetBrains Mono', monospace;
+      --sans: 'Space Grotesk', sans-serif;
+      --sidebar: 260px;
+      --topbar: 56px;
+      --r: 10px;
+    }
+
+    html {
+      scroll-behavior: smooth
+    }
+
+    body {
+      background: var(--bg);
+      color: var(--text);
+      font-family: var(--sans);
+      font-size: 14px;
+      overflow-x: hidden
+    }
+
+    body::before {
+      content: '';
+      position: fixed;
+      inset: 0;
+      background-image: linear-gradient(var(--border) 1px, transparent 1px), linear-gradient(90deg, var(--border) 1px, transparent 1px);
+      background-size: 52px 52px;
+      opacity: .18;
+      pointer-events: none;
+      z-index: 0
+    }
+
+    /* ── MOBILE TOP BAR ──────────────────── */
+    #topbar {
+      display: none;
+      position: fixed;
+      top: 0;
+      left: 0;
+      right: 0;
+      height: var(--topbar);
+      background: var(--surface);
+      border-bottom: 1px solid var(--border);
+      z-index: 200;
+      align-items: center;
+      padding: 0 16px;
+      gap: 12px
+    }
+
+    #menu-btn {
+      background: none;
+      border: none;
+      cursor: pointer;
+      color: var(--texthi);
+      font-size: 22px;
+      padding: 4px;
+      line-height: 1
+    }
+
+    #topbar-title {
+      font-family: var(--mono);
+      font-size: 12px;
+      font-weight: 600;
+      color: var(--accent);
+      letter-spacing: .12em;
+      flex: 1
+    }
+
+    #topbar-logo {
+      font-size: 20px
+    }
+
+    /* ── SIDEBAR OVERLAY (mobile) ────────── */
+    #sidebar-overlay {
+      display: none;
+      position: fixed;
+      inset: 0;
+      background: rgba(0, 0, 0, .6);
+      z-index: 149;
+      backdrop-filter: blur(2px)
+    }
+
+    #sidebar-overlay.open {
+      display: block
+    }
+
+    /* ── SIDEBAR ─────────────────────────── */
+    #sidebar {
+      position: fixed;
+      left: 0;
+      top: 0;
+      bottom: 0;
+      width: var(--sidebar);
+      background: var(--surface);
+      border-right: 1px solid var(--border);
+      z-index: 150;
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+      transition: transform .28s cubic-bezier(.4, 0, .2, 1)
+    }
+
+    .sb-head {
+      padding: 20px 18px 16px;
+      border-bottom: 1px solid var(--border);
+      flex-shrink: 0
+    }
+
+    .sb-head .logo-row {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      margin-bottom: 4px
+    }
+
+    .sb-head .globe {
+      font-size: 22px
+    }
+
+    .sb-head h1 {
+      font-family: var(--mono);
+      font-size: 12px;
+      font-weight: 600;
+      letter-spacing: .15em;
+      text-transform: uppercase;
+      color: var(--accent)
+    }
+
+    .sb-head p {
+      font-size: 11px;
+      color: var(--textdim);
+      margin-top: 2px
+    }
+
+    .sb-search {
+      padding: 14px 16px;
+      border-bottom: 1px solid var(--border);
+      flex: 1;
+      overflow: hidden;
+      display: flex;
+      flex-direction: column;
+      min-height: 0
+    }
+
+    .sb-section-lbl {
+      font-family: var(--mono);
+      font-size: 9px;
+      letter-spacing: .2em;
+      text-transform: uppercase;
+      color: var(--textdim);
+      margin-bottom: 8px;
+      flex-shrink: 0
+    }
+
+    .search-wrap {
+      position: relative;
+      margin-bottom: 6px;
+      flex-shrink: 0
+    }
+
+    .search-wrap input {
+      width: 100%;
+      padding: 8px 32px 8px 10px;
+      background: var(--s2);
+      border: 1px solid var(--border2);
+      border-radius: 7px;
+      color: var(--texthi);
+      font-family: var(--sans);
+      font-size: 12px;
+      outline: none;
+      transition: border .2s
+    }
+
+    .search-wrap input:focus {
+      border-color: var(--accent)
+    }
+
+    .search-wrap input::placeholder {
+      color: var(--textdim)
+    }
+
+    .search-wrap .clear-btn {
+      position: absolute;
+      right: 8px;
+      top: 50%;
+      transform: translateY(-50%);
+      background: none;
+      border: none;
+      color: var(--textdim);
+      cursor: pointer;
+      font-size: 14px;
+      line-height: 1
+    }
+
+    .search-wrap .clear-btn:hover {
+      color: var(--red)
+    }
+
+    #country-list {
+      flex: 1;
+      overflow-y: auto;
+      padding: 4px 0;
+      min-height: 0
+    }
+
+    .country-item {
+      padding: 7px 16px;
+      cursor: pointer;
+      font-size: 12px;
+      color: var(--text);
+      transition: background .15s;
+      display: flex;
+      align-items: center;
+      white-space: nowrap;
+      overflow: hidden;
+      gap: 4px
+    }
+
+    .country-item:hover {
+      background: var(--s2);
+      color: var(--texthi)
+    }
+
+    .country-item.active {
+      background: var(--glow);
+      color: var(--accent);
+      border-right: 2px solid var(--accent)
+    }
+
+    .country-item.in-compare {
+      background: rgba(77, 166, 255, .08);
+      border-right: 2px solid var(--blue)
+    }
+
+    .country-item .c-name {
+      flex: 1;
+      overflow: hidden;
+      text-overflow: ellipsis
+    }
+
+    .country-item .c-co2 {
+      font-family: var(--mono);
+      font-size: 10px;
+      color: var(--textdim);
+      flex-shrink: 0
+    }
+
+    .country-item .c-plus {
+      font-size: 13px;
+      color: var(--textdim);
+      cursor: pointer;
+      transition: color .15s;
+      padding: 2px 4px;
+      flex-shrink: 0
+    }
+
+    .country-item:hover .c-plus {
+      color: var(--blue)
+    }
+
+    .country-item.in-compare .c-plus {
+      color: var(--blue)
+    }
+
+    ::-webkit-scrollbar {
+      width: 4px;
+      height: 4px
+    }
+
+    ::-webkit-scrollbar-track {
+      background: transparent
+    }
+
+    ::-webkit-scrollbar-thumb {
+      background: var(--border2);
+      border-radius: 2px
+    }
+
+    .sb-footer {
+      padding: 12px 16px;
+      border-top: 1px solid var(--border);
+      font-family: var(--mono);
+      font-size: 9px;
+      color: var(--textdim);
+      line-height: 1.9;
+      flex-shrink: 0
+    }
+
+    /* ── MAIN ────────────────────────────── */
+    #main {
+      margin-left: var(--sidebar);
+      flex: 1;
+      padding: 24px 24px 60px;
+      position: relative;
+      z-index: 1;
+      min-height: 100vh
+    }
+
+    .pg-header {
+      display: flex;
+      align-items: flex-start;
+      justify-content: space-between;
+      margin-bottom: 20px;
+      gap: 12px;
+      flex-wrap: wrap
+    }
+
+    .pg-header h2 {
+      font-size: 22px;
+      font-weight: 700;
+      color: var(--texthi);
+      letter-spacing: -.02em
+    }
+
+    .pg-header h2 span {
+      color: var(--accent)
+    }
+
+    .pg-meta {
+      font-family: var(--mono);
+      font-size: 10px;
+      color: var(--textdim);
+      text-align: right;
+      line-height: 1.8
+    }
+
+    /* ── TABS ────────────────────────────── */
+    .tabs {
+      display: flex;
+      gap: 2px;
+      margin-bottom: 20px;
+      border-bottom: 1px solid var(--border);
+      overflow-x: auto;
+      scrollbar-width: none
+    }
+
+    .tabs::-webkit-scrollbar {
+      display: none
+    }
+
+    .tab-btn {
+      padding: 8px 14px 10px;
+      font-family: var(--mono);
+      font-size: 10px;
+      letter-spacing: .06em;
+      color: var(--textdim);
+      background: none;
+      border: none;
+      cursor: pointer;
+      border-bottom: 2px solid transparent;
+      margin-bottom: -1px;
+      transition: all .2s;
+      white-space: nowrap;
+      flex-shrink: 0
+    }
+
+    .tab-btn:hover {
+      color: var(--texthi)
+    }
+
+    .tab-btn.active {
+      color: var(--accent);
+      border-bottom-color: var(--accent)
+    }
+
+    .tab-panel {
+      display: none
+    }
+
+    .tab-panel.active {
+      display: block
+    }
+
+    /* ── KPI CARDS ───────────────────────── */
+    .kpi-row {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 12px;
+      margin-bottom: 18px
+    }
+
+    .kpi {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--r);
+      padding: 14px 16px;
+      transition: border .2s;
+      animation: fadeUp .4s ease both
+    }
+
+    .kpi:hover {
+      border-color: var(--border2)
+    }
+
+    .kpi::before {
+      content: '';
+      display: block;
+      width: 100%;
+      height: 2px;
+      background: var(--accent);
+      transform: scaleX(0);
+      transform-origin: left;
+      transition: transform .4s;
+      margin-bottom: 10px
+    }
+
+    .kpi:hover::before {
+      transform: scaleX(1)
+    }
+
+    .kpi-lbl {
+      font-family: var(--mono);
+      font-size: 9px;
+      letter-spacing: .18em;
+      text-transform: uppercase;
+      color: var(--textdim);
+      margin-bottom: 6px
+    }
+
+    .kpi-val {
+      font-family: var(--mono);
+      font-size: 22px;
+      font-weight: 600;
+      color: var(--texthi);
+      line-height: 1
+    }
+
+    .kpi-sub {
+      font-size: 11px;
+      color: var(--textdim);
+      margin-top: 3px
+    }
+
+    .green {
+      color: var(--accent)
+    }
+
+    .red {
+      color: var(--red)
+    }
+
+    .amber {
+      color: var(--amber)
+    }
+
+    .blue {
+      color: var(--blue)
+    }
+
+    /* ── CARDS ───────────────────────────── */
+    .card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--r);
+      padding: 18px;
+      margin-bottom: 14px;
+      transition: border .2s
+    }
+
+    .card:hover {
+      border-color: var(--border2)
+    }
+
+    .card-title {
+      font-family: var(--mono);
+      font-size: 9px;
+      letter-spacing: .18em;
+      text-transform: uppercase;
+      color: var(--accent);
+      margin-bottom: 14px;
+      display: flex;
+      align-items: center;
+      gap: 8px
+    }
+
+    .card-title::before {
+      content: '';
+      display: inline-block;
+      width: 3px;
+      height: 12px;
+      background: var(--accent);
+      border-radius: 2px;
+      flex-shrink: 0
+    }
+
+    .grid-2 {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 12px
+    }
+
+    .grid-3 {
+      display: grid;
+      grid-template-columns: 1fr 1.3fr 1.3fr;
+      gap: 12px
+    }
+
+    /* ── INSIGHT BOX ─────────────────────── */
+    .insight {
+      background: linear-gradient(135deg, var(--surface), var(--s2));
+      border: 1px solid var(--border);
+      border-left: 3px solid var(--accent);
+      border-radius: var(--r);
+      padding: 18px 20px;
+      margin-bottom: 14px
+    }
+
+    .ins-head {
+      font-size: 14px;
+      font-weight: 500;
+      color: var(--texthi);
+      margin-bottom: 7px;
+      line-height: 1.5
+    }
+
+    .ins-detail,
+    .ins-rec {
+      font-size: 12px;
+      color: var(--textdim);
+      line-height: 1.7;
+      margin-bottom: 7px
+    }
+
+    .ins-rec {
+      color: var(--text);
+      margin-bottom: 0
+    }
+
+    .risk-chip {
+      display: inline-flex;
+      align-items: center;
+      padding: 3px 10px;
+      border-radius: 20px;
+      font-family: var(--mono);
+      font-size: 9px;
+      font-weight: 600;
+      letter-spacing: .12em;
+      float: right
+    }
+
+    /* ── SLIDERS / TOGGLES ───────────────── */
+    .year-slider-row {
+      display: flex;
+      align-items: center;
+      gap: 14px;
+      margin-bottom: 14px;
+      flex-wrap: wrap
+    }
+
+    .year-slider-row label {
+      font-family: var(--mono);
+      font-size: 10px;
+      color: var(--textdim);
+      white-space: nowrap
+    }
+
+    .year-slider-row input[type=range] {
+      flex: 1;
+      min-width: 120px;
+      -webkit-appearance: none;
+      appearance: none;
+      height: 3px;
+      border-radius: 2px;
+      background: var(--border2);
+      outline: none;
+      cursor: pointer
+    }
+
+    .year-slider-row input[type=range]::-webkit-slider-thumb {
+      -webkit-appearance: none;
+      appearance: none;
+      width: 14px;
+      height: 14px;
+      border-radius: 50%;
+      background: var(--accent);
+      box-shadow: 0 0 6px var(--glow)
+    }
+
+    .year-slider-row .yr-val {
+      font-family: var(--mono);
+      font-size: 13px;
+      font-weight: 600;
+      color: var(--accent);
+      min-width: 36px;
+      text-align: right
+    }
+
+    .model-toggle {
+      display: flex;
+      gap: 6px;
+      flex-wrap: wrap
+    }
+
+    .model-btn {
+      padding: 5px 14px;
+      border-radius: 6px;
+      border: 1px solid var(--border2);
+      background: var(--s2);
+      color: var(--textdim);
+      font-family: var(--mono);
+      font-size: 10px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all .2s
+    }
+
+    .model-btn.active {
+      background: var(--glow);
+      border-color: var(--accent);
+      color: var(--accent)
+    }
+
+    /* ── TOP 10 LIST ─────────────────────── */
+    .emitter-list {
+      display: flex;
+      flex-direction: column;
+      gap: 6px
+    }
+
+    .emitter-row {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      font-size: 12px
+    }
+
+    .emitter-rank {
+      font-family: var(--mono);
+      font-size: 10px;
+      color: var(--textdim);
+      width: 18px;
+      text-align: right;
+      flex-shrink: 0
+    }
+
+    .emitter-name {
+      flex: 1;
+      color: var(--text);
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      cursor: pointer
+    }
+
+    .emitter-bar-wrap {
+      width: 80px;
+      height: 5px;
+      background: var(--s3);
+      border-radius: 3px;
+      overflow: hidden;
+      flex-shrink: 0
+    }
+
+    .emitter-bar {
+      height: 100%;
+      border-radius: 3px;
+      background: var(--accent);
+      transition: width .4s
+    }
+
+    .emitter-val {
+      font-family: var(--mono);
+      font-size: 10px;
+      color: var(--textdim);
+      width: 56px;
+      text-align: right;
+      flex-shrink: 0
+    }
+
+    /* ── COMPARE ─────────────────────────── */
+    .cmp-selector {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--r);
+      padding: 16px 18px;
+      margin-bottom: 16px
+    }
+
+    .cmp-chips {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+      min-height: 36px;
+      margin-bottom: 12px;
+      align-items: center
+    }
+
+    .cmp-chip {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      padding: 5px 10px 5px 12px;
+      border-radius: 20px;
+      font-size: 12px;
+      font-weight: 500;
+      border: 1px solid
+    }
+
+    .cmp-chip .chip-x {
+      background: none;
+      border: none;
+      cursor: pointer;
+      font-size: 13px;
+      line-height: 1;
+      opacity: .7;
+      padding: 0
+    }
+
+    .cmp-chip .chip-x:hover {
+      opacity: 1
+    }
+
+    .cmp-hint {
+      font-family: var(--mono);
+      font-size: 10px;
+      color: var(--textdim)
+    }
+
+    .cmp-controls {
+      display: flex;
+      gap: 8px;
+      align-items: center;
+      flex-wrap: wrap
+    }
+
+    .cmp-dd {
+      position: relative;
+      flex: 1;
+      min-width: 200px
+    }
+
+    .cmp-dd input {
+      width: 100%;
+      padding: 8px 12px;
+      background: var(--s2);
+      border: 1px solid var(--border2);
+      border-radius: 7px;
+      color: var(--texthi);
+      font-family: var(--sans);
+      font-size: 12px;
+      outline: none;
+      transition: border .2s
+    }
+
+    .cmp-dd input:focus {
+      border-color: var(--blue)
+    }
+
+    .cmp-dd-list {
+      position: absolute;
+      top: calc(100% + 4px);
+      left: 0;
+      right: 0;
+      background: var(--s2);
+      border: 1px solid var(--border2);
+      border-radius: 7px;
+      z-index: 50;
+      max-height: 200px;
+      overflow-y: auto;
+      display: none
+    }
+
+    .cmp-dd-list.open {
+      display: block
+    }
+
+    .cmp-dd-item {
+      padding: 7px 12px;
+      font-size: 12px;
+      color: var(--text);
+      cursor: pointer;
+      display: flex;
+      justify-content: space-between;
+      transition: background .1s
+    }
+
+    .cmp-dd-item:hover {
+      background: var(--s3);
+      color: var(--texthi)
+    }
+
+    .cmp-dd-item.disabled {
+      color: var(--textdim);
+      cursor: default;
+      opacity: .6
+    }
+
+    .cmp-dd-item .ddval {
+      font-family: var(--mono);
+      font-size: 10px;
+      color: var(--textdim)
+    }
+
+    .btn-sm {
+      padding: 7px 14px;
+      background: none;
+      border: 1px solid var(--border2);
+      border-radius: 7px;
+      color: var(--textdim);
+      font-family: var(--mono);
+      font-size: 10px;
+      cursor: pointer;
+      transition: all .2s;
+      white-space: nowrap
+    }
+
+    .btn-sm:hover {
+      border-color: var(--red);
+      color: var(--red)
+    }
+
+    .cmp-table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 12px
+    }
+
+    .cmp-table th {
+      text-align: left;
+      padding: 8px 10px;
+      font-family: var(--mono);
+      font-size: 9px;
+      letter-spacing: .12em;
+      text-transform: uppercase;
+      color: var(--textdim);
+      border-bottom: 1px solid var(--border)
+    }
+
+    .cmp-table td {
+      padding: 8px 10px;
+      border-bottom: 1px solid var(--border);
+      color: var(--text)
+    }
+
+    .cmp-table tr:hover td {
+      background: var(--s2)
+    }
+
+    .td-mono {
+      font-family: var(--mono);
+      color: var(--texthi)
+    }
+
+    /* ── CHAT ────────────────────────────── */
+    .chat-layout {
+      display: grid;
+      grid-template-columns: 1fr 310px;
+      gap: 16px;
+      align-items: start
+    }
+
+    .chat-main {
+      display: flex;
+      flex-direction: column;
+      gap: 12px
+    }
+
+    .status-bar {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 10px 16px;
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--r);
+      font-family: var(--mono);
+      font-size: 10px
+    }
+
+    .sdot {
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      margin-right: 8px;
+      display: inline-block;
+      flex-shrink: 0
+    }
+
+    .sdot.online {
+      background: var(--accent);
+      box-shadow: 0 0 6px var(--accent)
+    }
+
+    .sdot.offline {
+      background: var(--red)
+    }
+
+    .sdot.checking {
+      background: var(--amber);
+      animation: blink 1s infinite
+    }
+
+    @keyframes blink {
+
+      0%,
+      100% {
+        opacity: 1
+      }
+
+      50% {
+        opacity: .3
+      }
+    }
+
+    .chat-messages {
+      height: 400px;
+      overflow-y: auto;
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--r);
+      padding: 16px;
+      display: flex;
+      flex-direction: column;
+      gap: 14px
+    }
+
+    .bubble {
+      max-width: 86%;
+      line-height: 1.65;
+      font-size: 13px
+    }
+
+    .bubble.user {
+      align-self: flex-end;
+      background: var(--glow);
+      border: 1px solid var(--accent-d);
+      border-radius: 14px 14px 4px 14px;
+      padding: 10px 14px;
+      color: var(--texthi)
+    }
+
+    .bubble.ai {
+      align-self: flex-start;
+      background: var(--s2);
+      border: 1px solid var(--border2);
+      border-radius: 14px 14px 14px 4px;
+      padding: 10px 14px;
+      color: var(--text)
+    }
+
+    .bubble.ai strong {
+      color: var(--texthi)
+    }
+
+    .bubble.ai em {
+      color: var(--accent)
+    }
+
+    .bubble.ai ul {
+      margin: 6px 0 6px 18px
+    }
+
+    .bubble.ai li {
+      margin-bottom: 3px
+    }
+
+    .bubble.err {
+      align-self: center;
+      background: rgba(255, 64, 96, .1);
+      border: 1px solid var(--red);
+      border-radius: 10px;
+      padding: 10px 14px;
+      color: var(--red);
+      font-size: 12px;
+      text-align: center;
+      max-width: 100%
+    }
+
+    .bubble-lbl {
+      font-family: var(--mono);
+      font-size: 9px;
+      letter-spacing: .12em;
+      text-transform: uppercase;
+      margin-bottom: 5px;
+      opacity: .55
+    }
+
+    .typing {
+      align-self: flex-start;
+      background: var(--s2);
+      border: 1px solid var(--border2);
+      border-radius: 14px 14px 14px 4px;
+      padding: 12px 16px;
+      display: none
+    }
+
+    .tdots {
+      display: flex;
+      gap: 4px
+    }
+
+    .tdots span {
+      width: 6px;
+      height: 6px;
+      background: var(--textdim);
+      border-radius: 50%;
+      animation: tdot 1.2s infinite
+    }
+
+    .tdots span:nth-child(2) {
+      animation-delay: .2s
+    }
+
+    .tdots span:nth-child(3) {
+      animation-delay: .4s
+    }
+
+    @keyframes tdot {
+
+      0%,
+      60%,
+      100% {
+        transform: translateY(0)
+      }
+
+      30% {
+        transform: translateY(-6px)
+      }
+    }
+
+    .chat-input-row {
+      display: flex;
+      gap: 8px
+    }
+
+    .chat-input-row textarea {
+      flex: 1;
+      padding: 10px 14px;
+      background: var(--s2);
+      border: 1px solid var(--border2);
+      border-radius: 10px;
+      color: var(--texthi);
+      font-family: var(--sans);
+      font-size: 13px;
+      outline: none;
+      resize: none;
+      height: 48px;
+      line-height: 1.4;
+      transition: border .2s
+    }
+
+    .chat-input-row textarea:focus {
+      border-color: var(--accent)
+    }
+
+    .chat-input-row textarea::placeholder {
+      color: var(--textdim)
+    }
+
+    .btn-send {
+      padding: 0 20px;
+      background: var(--accent);
+      color: var(--bg);
+      border: none;
+      border-radius: 10px;
+      font-family: var(--mono);
+      font-size: 11px;
+      font-weight: 600;
+      cursor: pointer;
+      height: 48px;
+      transition: all .2s;
+      white-space: nowrap;
+      flex-shrink: 0
+    }
+
+    .btn-send:hover {
+      background: var(--accent-d)
+    }
+
+    .btn-send:disabled {
+      background: var(--border2);
+      color: var(--textdim);
+      cursor: not-allowed
+    }
+
+    .chat-side {
+      display: flex;
+      flex-direction: column;
+      gap: 12px
+    }
+
+    .sugg-grid {
+      display: flex;
+      flex-direction: column;
+      gap: 6px
+    }
+
+    .sugg-btn {
+      padding: 9px 12px;
+      background: var(--s2);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      color: var(--text);
+      font-size: 12px;
+      text-align: left;
+      cursor: pointer;
+      line-height: 1.4;
+      transition: all .2s
+    }
+
+    .sugg-btn:hover {
+      border-color: var(--accent);
+      color: var(--texthi);
+      background: var(--glow)
+    }
+
+    .info-box {
+      background: var(--s2);
+      border: 1px solid var(--border);
+      border-radius: var(--r);
+      padding: 14px 16px;
+      font-size: 11px;
+      color: var(--textdim);
+      line-height: 1.75
+    }
+
+    .info-box strong {
+      color: var(--text)
+    }
+
+    .info-box a {
+      color: var(--accent);
+      text-decoration: none
+    }
+
+    .cmd {
+      font-family: var(--mono);
+      font-size: 10px;
+      background: var(--s3);
+      border: 1px solid var(--border);
+      border-radius: 5px;
+      padding: 5px 10px;
+      color: var(--accent);
+      display: block;
+      margin: 5px 0;
+      word-break: break-all
+    }
+
+    /* ── MISC ────────────────────────────── */
+    .no-data {
+      padding: 60px 0;
+      text-align: center;
+      color: var(--textdim);
+      font-family: var(--mono);
+      font-size: 12px
+    }
+
+    @keyframes fadeUp {
+      from {
+        opacity: 0;
+        transform: translateY(14px)
+      }
+
+      to {
+        opacity: 1;
+        transform: translateY(0)
+      }
+    }
+
+    .kpi:nth-child(1) {
+      animation-delay: .05s
+    }
+
+    .kpi:nth-child(2) {
+      animation-delay: .1s
+    }
+
+    .kpi:nth-child(3) {
+      animation-delay: .15s
+    }
+
+    .kpi:nth-child(4) {
+      animation-delay: .2s
+    }
+
+    .js-plotly-plot .modebar {
+      display: none !important
+    }
+
+    /* ═══════════════════════════════════════
+   RESPONSIVE BREAKPOINTS
+   ═══════════════════════════════════════ */
+
+    /* ── Tablet (≤900px) ─────────────────── */
+    @media(max-width:900px) {
+      :root {
+        --sidebar: 240px
+      }
+
+      .kpi-row {
+        grid-template-columns: repeat(2, 1fr)
+      }
+
+      .grid-3 {
+        grid-template-columns: 1fr 1fr
+      }
+
+      .grid-3>:last-child {
+        grid-column: 1/-1
+      }
+
+      .chat-layout {
+        grid-template-columns: 1fr
+      }
+
+      .chat-side {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 12px
+      }
+
+      .pg-meta {
+        display: none
+      }
+    }
+
+    /* ── Mobile (≤640px) ─────────────────── */
+    @media(max-width:640px) {
+      body {
+        padding-top: var(--topbar)
+      }
+
+      #topbar {
+        display: flex
+      }
+
+      #sidebar {
+        transform: translateX(-100%)
+      }
+
+      #sidebar.mobile-open {
+        transform: translateX(0)
+      }
+
+      #main {
+        margin-left: 0;
+        padding: 16px 12px 60px
+      }
+
+      .pg-header {
+        margin-bottom: 14px
+      }
+
+      .pg-header h2 {
+        font-size: 18px
+      }
+
+      .kpi-row {
+        grid-template-columns: repeat(2, 1fr);
+        gap: 8px;
+        margin-bottom: 12px
+      }
+
+      .kpi {
+        padding: 10px 12px
+      }
+
+      .kpi-val {
+        font-size: 18px
+      }
+
+      .grid-2 {
+        grid-template-columns: 1fr
+      }
+
+      .grid-3 {
+        grid-template-columns: 1fr
+      }
+
+      .tabs {
+        gap: 0
+      }
+
+      .tab-btn {
+        padding: 7px 10px 9px;
+        font-size: 9px
+      }
+
+      .card {
+        padding: 14px
+      }
+
+      .insight {
+        padding: 14px 16px
+      }
+
+      .ins-head {
+        font-size: 13px
+      }
+
+      .chat-layout {
+        grid-template-columns: 1fr
+      }
+
+      .chat-side {
+        display: flex;
+        flex-direction: column
+      }
+
+      .chat-messages {
+        height: 320px
+      }
+
+      .cmp-table th:nth-child(4),
+      .cmp-table td:nth-child(4),
+      .cmp-table th:nth-child(5),
+      .cmp-table td:nth-child(5) {
+        display: none
+      }
+
+      .year-slider-row {
+        flex-wrap: nowrap
+      }
+
+      .emitter-bar-wrap {
+        width: 50px
+      }
+
+      .emitter-val {
+        width: 48px;
+        font-size: 9px
+      }
+
+      .bubble {
+        max-width: 92%
+      }
+    }
+
+    /* ── Very small (≤380px) ─────────────── */
+    @media(max-width:380px) {
+      .kpi-row {
+        grid-template-columns: 1fr 1fr
+      }
+
+      .tab-btn {
+        padding: 6px 7px 8px;
+        font-size: 8.5px;
+        letter-spacing: .02em
+      }
+
+      #main {
+        padding: 12px 10px 60px
+      }
+
+      .kpi-val {
+        font-size: 16px
+      }
+    }
+  </style>
+</head>
+
+<body>
+
+  <!-- ── MOBILE TOPBAR ─────────────────── -->
+  <div id="topbar">
+    <button id="menu-btn" onclick="toggleSidebar()" aria-label="Toggle menu">☰</button>
+    <span id="topbar-logo">🌍</span>
+    <span id="topbar-title">CARBON MONITOR</span>
+  </div>
+
+  <!-- ── SIDEBAR OVERLAY ───────────────── -->
+  <div id="sidebar-overlay" onclick="closeSidebar()"></div>
+
+  <!-- ── SIDEBAR ───────────────────────── -->
+  <aside id="sidebar">
+    <div class="sb-head">
+      <div class="logo-row"><span class="globe">🌍</span>
+        <h1>Carbon Monitor</h1>
+      </div>
+      <p id="sb-meta">— countries</p>
+    </div>
+    <div class="sb-search">
+      <div class="sb-section-lbl" id="sb-mode-lbl">Select Country</div>
+      <div class="search-wrap">
+        <input type="text" id="country-search" placeholder="Search country…" oninput="filterCountries()" />
+        <button class="clear-btn" onclick="clearSearch()">✕</button>
+      </div>
+      <div id="country-list"></div>
+    </div>
+    <div class="sb-footer">scikit-learn · Plotly.js<br />Synthetic / OWID Dataset<br /><span id="footer-date">—</span>
+    </div>
+  </aside>
+
+  <!-- ── MAIN ───────────────────────────── -->
+  <main id="main">
+    <div class="pg-header">
+      <div>
+        <h2>Global Carbon <span>Emission</span> Dashboard</h2>
+        <div style="font-size:12px;color:var(--textdim);margin-top:3px;font-family:var(--mono)">Historical · ML Forecast
+          · AI Assistant</div>
+      </div>
+      <div class="pg-meta" id="pg-meta">—</div>
+    </div>
+
+    <div class="tabs">
+      <button class="tab-btn active" onclick="switchTab('map')">🗺️ Map</button>
+      <button class="tab-btn" onclick="switchTab('country')">📊 Country</button>
+      <button class="tab-btn" onclick="switchTab('compare')">🆚 Compare</button>
+      <button class="tab-btn" onclick="switchTab('global')">🌐 Global</button>
+      <button class="tab-btn" onclick="switchTab('chat')">🤖 AI Chat</button>
+    </div>
+
+    <!-- ════ TAB: MAP ════ -->
+    <div class="tab-panel active" id="tab-map">
+      <div class="kpi-row">
+        <div class="kpi">
+          <div class="kpi-lbl">Global CO₂</div>
+          <div class="kpi-val green" id="kpi-global-total">—</div>
+          <div class="kpi-sub">Million Tonnes</div>
+        </div>
+        <div class="kpi">
+          <div class="kpi-lbl">Top Emitter</div>
+          <div class="kpi-val" id="kpi-top-emitter" style="font-size:15px">—</div>
+          <div class="kpi-sub" id="kpi-top-emitter-val">—</div>
+        </div>
+        <div class="kpi">
+          <div class="kpi-lbl">Countries</div>
+          <div class="kpi-val blue" id="kpi-n-countries">—</div>
+          <div class="kpi-sub" id="kpi-year-range">—</div>
+        </div>
+        <div class="kpi">
+          <div class="kpi-lbl">Data Year</div>
+          <div class="kpi-val amber" id="kpi-data-year">—</div>
+          <div class="kpi-sub">Latest</div>
+        </div>
+      </div>
+      <div class="card" style="padding:14px 18px">
+        <div class="year-slider-row">
+          <label>YEAR</label>
+          <input type="range" id="map-year-slider" min="2003" max="2023" step="5" value="2023"
+            oninput="onMapYearChange()" />
+          <div class="yr-val" id="map-year-val">2023</div>
+        </div>
+        <div style="display:flex;gap:8px;flex-wrap:wrap">
+          <button class="model-btn active" id="map-mode-total" onclick="setMapMode('total')">Total CO₂</button>
+          <button class="model-btn" id="map-mode-percap" onclick="setMapMode('percap')">Per Capita</button>
+        </div>
+      </div>
+      <div class="card">
+        <div class="card-title">CO₂ Emissions by Country</div>
+        <div id="chart-map" style="height:min(440px,55vw)"></div>
+      </div>
+      <div class="grid-2">
+        <div class="card" style="margin-bottom:0">
+          <div class="card-title">Top 10 Emitters</div>
+          <div id="top10-list" class="emitter-list"></div>
+        </div>
+        <div class="card" style="margin-bottom:0">
+          <div class="card-title">Top 10 Trends</div>
+          <div id="chart-top10" style="height:min(260px,55vw)"></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ════ TAB: COUNTRY ════ -->
+    <div class="tab-panel" id="tab-country">
+      <div
+        style="display:flex;align-items:center;justify-content:space-between;margin-bottom:16px;flex-wrap:wrap;gap:10px">
+        <div>
+          <div style="font-size:18px;font-weight:600;color:var(--texthi)" id="country-title">Select a country →</div>
+          <div style="font-size:11px;color:var(--textdim);font-family:var(--mono)" id="country-subtitle">Use the sidebar
+          </div>
+        </div>
+        <div class="model-toggle">
+          <button class="model-btn active" id="btn-rf" onclick="setModel('rf')">Random Forest</button>
+          <button class="model-btn" id="btn-lr" onclick="setModel('lr')">Linear Reg.</button>
+        </div>
+      </div>
+      <div id="country-no-data" class="no-data">🌍 Select a country from the sidebar.</div>
+      <div id="country-detail" style="display:none">
+        <div class="kpi-row">
+          <div class="kpi">
+            <div class="kpi-lbl">Latest CO₂</div>
+            <div class="kpi-val green" id="ckpi-latest">—</div>
+            <div class="kpi-sub">MT</div>
+          </div>
+          <div class="kpi">
+            <div class="kpi-lbl">Forecast End</div>
+            <div class="kpi-val" id="ckpi-fc-end">—</div>
+            <div class="kpi-sub" id="ckpi-fc-year">—</div>
+          </div>
+          <div class="kpi">
+            <div class="kpi-lbl">Change</div>
+            <div class="kpi-val" id="ckpi-change">—</div>
+            <div class="kpi-sub">vs current</div>
+          </div>
+          <div class="kpi">
+            <div class="kpi-lbl">Risk</div>
+            <div class="kpi-val" id="ckpi-risk">—</div>
+            <div class="kpi-sub">R² <span id="ckpi-r2" style="font-family:var(--mono);color:var(--accent)">—</span>
+            </div>
+          </div>
+        </div>
+        <div class="insight">
+          <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:8px">
+            <div style="font-family:var(--mono);font-size:9px;letter-spacing:.2em;color:var(--textdim)">🧠 AI INSIGHT
+            </div>
+            <div class="risk-chip" id="risk-chip">—</div>
+          </div>
+          <div class="ins-head" id="ins-head">—</div>
+          <div class="ins-detail" id="ins-detail">—</div>
+          <div class="ins-rec" id="ins-rec">—</div>
+        </div>
+        <div class="card">
+          <div class="card-title">Emission History &amp; Forecast</div>
+          <div id="chart-country-trend" style="height:min(340px,60vw)"></div>
+        </div>
+        <div class="grid-3">
+          <div class="card" style="margin-bottom:0">
+            <div class="card-title">Gauge</div>
+            <div id="chart-country-gauge" style="height:min(220px,55vw)"></div>
+          </div>
+          <div class="card" style="margin-bottom:0">
+            <div class="card-title">Feature Importances</div>
+            <div id="chart-country-fi" style="height:min(220px,55vw)"></div>
+          </div>
+          <div class="card" style="margin-bottom:0">
+            <div class="card-title">Actual vs Predicted</div>
+            <div id="chart-country-scatter" style="height:min(220px,55vw)"></div>
+          </div>
+        </div>
+        <div class="card" style="margin-top:14px">
+          <div class="card-title">Forecast Table</div>
+          <div style="overflow-x:auto">
+            <table style="width:100%;border-collapse:collapse;font-family:var(--mono);font-size:11px;min-width:280px">
+              <thead>
+                <tr>
+                  <th
+                    style="text-align:left;padding:7px 10px;color:var(--textdim);font-size:9px;border-bottom:1px solid var(--border)">
+                    YEAR</th>
+                  <th
+                    style="text-align:left;padding:7px 10px;color:var(--accent);font-size:9px;border-bottom:1px solid var(--border)">
+                    RF (MT)</th>
+                  <th
+                    style="text-align:left;padding:7px 10px;color:var(--amber);font-size:9px;border-bottom:1px solid var(--border)">
+                    LR (MT)</th>
+                </tr>
+              </thead>
+              <tbody id="fc-table-body"></tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ════ TAB: COMPARE ════ -->
+    <div class="tab-panel" id="tab-compare">
+      <div class="cmp-selector">
+        <div class="card-title" style="margin-bottom:10px">Select Up to 4 Countries to Compare</div>
+        <div class="cmp-chips" id="cmp-chips"><span class="cmp-hint">No countries selected</span></div>
+        <div class="cmp-controls">
+          <div class="cmp-dd">
+            <input type="text" id="cmp-input" placeholder="Type to search and add a country…" oninput="filterCmpDd()"
+              onfocus="openCmpDd()" onblur="setTimeout(closeCmpDd,200)" autocomplete="off" />
+            <div class="cmp-dd-list" id="cmp-dd-list"></div>
+          </div>
+          <button class="btn-sm" onclick="clearCompare()">Clear All</button>
+        </div>
+      </div>
+      <div id="cmp-placeholder" class="no-data">🆚 Add at least 2 countries to compare.</div>
+      <div id="cmp-content" style="display:none">
+        <div class="card">
+          <div class="card-title">Emission History &amp; Forecast</div>
+          <div id="chart-cmp-trend" style="height:min(380px,60vw)"></div>
+        </div>
+        <div class="grid-2">
+          <div class="card" style="margin-bottom:0">
+            <div class="card-title">Latest Year (MT)</div>
+            <div id="chart-cmp-latest" style="height:min(280px,55vw)"></div>
+          </div>
+          <div class="card" style="margin-bottom:0">
+            <div class="card-title">5-Year Forecast</div>
+            <div id="chart-cmp-fc" style="height:min(280px,55vw)"></div>
+          </div>
+        </div>
+        <div style="height:14px"></div>
+        <div class="grid-2">
+          <div class="card" style="margin-bottom:0">
+            <div class="card-title">Radar Comparison</div>
+            <div id="chart-cmp-radar" style="height:min(300px,80vw)"></div>
+          </div>
+          <div class="card" style="margin-bottom:0">
+            <div class="card-title">Metrics Table</div>
+            <div style="overflow-x:auto">
+              <table class="cmp-table">
+                <thead>
+                  <tr>
+                    <th>Country</th>
+                    <th>Latest</th>
+                    <th>Forecast</th>
+                    <th>Change</th>
+                    <th>R²</th>
+                    <th>Risk</th>
+                  </tr>
+                </thead>
+                <tbody id="cmp-tbody"></tbody>
+              </table>
+            </div>
+            <div style="margin-top:16px">
+              <div
+                style="font-family:var(--mono);font-size:9px;letter-spacing:.14em;color:var(--textdim);margin-bottom:10px;text-transform:uppercase">
+                Projected % Change</div>
+              <div id="cmp-pct-bars"></div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ════ TAB: GLOBAL ════ -->
+    <div class="tab-panel" id="tab-global">
+      <div class="kpi-row">
+        <div class="kpi">
+          <div class="kpi-lbl">1990 CO₂</div>
+          <div class="kpi-val" id="gkpi-1990">—</div>
+          <div class="kpi-sub">MT</div>
+        </div>
+        <div class="kpi">
+          <div class="kpi-lbl">Latest CO₂</div>
+          <div class="kpi-val green" id="gkpi-latest">—</div>
+          <div class="kpi-sub">MT</div>
+        </div>
+        <div class="kpi">
+          <div class="kpi-lbl">Growth</div>
+          <div class="kpi-val red" id="gkpi-growth">—</div>
+          <div class="kpi-sub">Since 1990</div>
+        </div>
+        <div class="kpi">
+          <div class="kpi-lbl">Countries</div>
+          <div class="kpi-val blue" id="gkpi-countries">—</div>
+          <div class="kpi-sub">tracked</div>
+        </div>
+      </div>
+      <div class="card">
+        <div class="card-title">Global CO₂ Total 1990–Present</div>
+        <div id="chart-global-total" style="height:min(300px,55vw)"></div>
+      </div>
+      <div class="grid-2">
+        <div class="card" style="margin-bottom:0">
+          <div class="card-title">Top 10 — Share of Global</div>
+          <div id="chart-top10-pie" style="height:min(300px,80vw)"></div>
+        </div>
+        <div class="card" style="margin-bottom:0">
+          <div class="card-title">Top 10 — Annual Trends</div>
+          <div id="chart-global-lines" style="height:min(300px,55vw)"></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ════ TAB: AI CHAT ════ -->
+    <div class="tab-panel" id="tab-chat">
+      <div class="chat-layout">
+        <div class="chat-main">
+          <div class="status-bar">
+            <div style="display:flex;align-items:center">
+              <span class="sdot checking" id="chat-dot"></span>
+              <span id="chat-status" style="color:var(--textdim)">Checking…</span>
+            </div>
+            <button class="btn-sm" onclick="clearChat()">Clear</button>
+          </div>
+          <div class="chat-messages" id="chat-messages">
+            <div class="bubble ai">
+              <div class="bubble-lbl">Carbon AI</div>
+              👋 Hi! I'm your Carbon Emission AI with data on <strong id="ai-count">—</strong> countries (<strong
+                id="ai-range">—</strong>).<br /><br />
+              Ask me anything about trends, forecasts, or comparisons!<br /><br />
+              <em style="font-size:11px;color:var(--textdim)">Run <code
+                  style="font-family:var(--mono);background:var(--s3);padding:1px 5px;border-radius:3px">chatbot_server.py</code>
+                to activate.</em>
+            </div>
+            <div class="typing" id="typing">
+              <div class="tdots"><span></span><span></span><span></span></div>
+            </div>
+          </div>
+          <div class="chat-input-row">
+            <textarea id="chat-input" placeholder="Ask about emissions, forecasts, comparisons…"
+              onkeydown="chatKey(event)"></textarea>
+            <button class="btn-send" id="btn-send" onclick="sendMsg()">↑</button>
+          </div>
+        </div>
+        <div class="chat-side">
+          <div class="card" style="margin-bottom:0;padding:14px 16px">
+            <div class="card-title">Suggested Questions</div>
+            <div class="sugg-grid" id="sugg-grid"></div>
+          </div>
+          <div class="info-box">
+            <p><strong>Enable AI Chat:</strong></p>
+            <p>1. Get free API key:<br /><a href="https://aistudio.google.com"
+                target="_blank">aistudio.google.com</a></p>
+            <p>2. Run:<code class="cmd">python chatbot_server.py</code></p>
+            <p>3. Open:<code class="cmd">http://localhost:5500</code></p>
+          </div>
+        </div>
+      </div>
+    </div>
+  </main>
+
+  <script>
+    const D = __DASHBOARD_DATA__;
+
+    // State
+    let activeCountry = null, activeModel = 'rf', mapMode = 'total', mapYear = D.meta.year_end;
+    let compareList = [], chatHistory = [], serverOnline = false, busy = false;
+    const PAL = ['#00e5b0', '#4da6ff', '#ff4060', '#ffbe4d', '#a78bfa', '#ff9f40', '#7dca5e', '#f06292', '#4dd0e1', '#ffd54f'];
+    const C = { bg: 'rgba(0,0,0,0)', surf: 'rgba(13,17,23,.8)', accent: '#00e5b0', red: '#ff4060', amber: '#ffbe4d', blue: '#4da6ff', text: '#9ab0cc', texthi: '#ddeeff', textdim: '#4a6080', grid: '#1e2d42', font: "'JetBrains Mono',monospace" };
+    const BL = { paper_bgcolor: C.bg, plot_bgcolor: C.surf, font: { family: C.font, color: C.text, size: 10 }, margin: { l: 44, r: 14, t: 20, b: 32 }, xaxis: { gridcolor: C.grid, zerolinecolor: C.grid, tickfont: { size: 9 } }, yaxis: { gridcolor: C.grid, zerolinecolor: C.grid, tickfont: { size: 9 } } };
+    const cfg = { responsive: true, displayModeBar: false };
+    const q = id => document.getElementById(id);
+    const fn = (v, d = 1) => v == null ? '—' : Number(v).toFixed(d);
+    const fp = v => (v >= 0 ? '+' : '') + fn(v, 1) + '%';
+
+    // ── SIDEBAR MOBILE ────────────────────────────────────────────────
+    function toggleSidebar() { const sb = q('sidebar'), ov = q('sidebar-overlay'); sb.classList.toggle('mobile-open'); ov.classList.toggle('open'); }
+    function closeSidebar() { q('sidebar').classList.remove('mobile-open'); q('sidebar-overlay').classList.remove('open'); }
+
+    // ── TABS ──────────────────────────────────────────────────────────
+    const TABS = ['map', 'country', 'compare', 'global', 'chat'];
+    function switchTab(name) {
+      document.querySelectorAll('.tab-btn').forEach((b, i) => b.classList.toggle('active', TABS[i] === name));
+      document.querySelectorAll('.tab-panel').forEach(p => p.classList.toggle('active', p.id === 'tab-' + name));
+      q('sb-mode-lbl').textContent = name === 'compare' ? 'Countries (⊕ to compare)' : 'Select Country';
+      if (name === 'global') renderGlobal();
+      if (name === 'compare') renderCompare();
+      if (name === 'map') renderMap();
+      if (name === 'chat') checkServer();
+      closeSidebar();
+    }
+
+    // ── SIDEBAR LIST ──────────────────────────────────────────────────
+    function buildList() {
+      const list = q('country-list'); list.innerHTML = '';
+      D.countries.forEach(c => {
+        const co2 = D.per_country[c]?.co2?.at(-1)?.toFixed(0) || '—';
+        const el = document.createElement('div'); el.className = 'country-item'; el.dataset.country = c;
+        el.innerHTML = `<span class="c-name">${c}</span><span class="c-co2">${co2}</span><span class="c-plus" onclick="event.stopPropagation();toggleCmp('${c.replace(/'/g, "\\'")}')">⊕</span>`;
+        el.addEventListener('click', () => { selectCountry(c); closeSidebar(); });
+        list.appendChild(el);
+      });
+      syncSidebar();
+    }
+    function filterCountries() { const v = q('country-search').value.toLowerCase(); document.querySelectorAll('.country-item').forEach(el => el.style.display = el.dataset.country.toLowerCase().includes(v) ? '' : 'none'); }
+    function clearSearch() { q('country-search').value = ''; filterCountries(); }
+    function syncSidebar() {
+      document.querySelectorAll('.country-item').forEach(el => {
+        const c = el.dataset.country;
+        el.classList.toggle('active', c === activeCountry);
+        el.classList.toggle('in-compare', compareList.includes(c));
+        const p = el.querySelector('.c-plus'); if (p) p.textContent = compareList.includes(c) ? '✓' : '⊕';
+      });
+    }
+
+    // ── COUNTRY DETAIL ────────────────────────────────────────────────
+    function selectCountry(c) { activeCountry = c; syncSidebar(); switchTab('country'); renderCountry(); }
+    function setModel(m) { activeModel = m; q('btn-rf').classList.toggle('active', m === 'rf'); q('btn-lr').classList.toggle('active', m === 'lr'); if (activeCountry) renderCountry(); }
+
+    function renderCountry() {
+      const cd = D.per_country[activeCountry]; if (!cd) { q('country-no-data').style.display = ''; q('country-detail').style.display = 'none'; return; }
+      q('country-no-data').style.display = 'none'; q('country-detail').style.display = 'block';
+      const ins = cd.insight, fc = activeModel === 'rf' ? cd.rf_forecast : cd.lr_forecast, r2 = activeModel === 'rf' ? cd.rf_r2 : cd.lr_r2, pct = ins.pct_change;
+      q('country-title').textContent = activeCountry;
+      q('country-subtitle').textContent = `ISO: ${cd.iso || '—'} · ${cd.years[0]}–${cd.years.at(-1)}`;
+      q('ckpi-latest').textContent = fn(cd.co2.at(-1), 1); q('ckpi-fc-end').textContent = fn(fc.at(-1), 1);
+      q('ckpi-fc-year').textContent = cd.forecast_years.at(-1);
+      q('ckpi-change').textContent = fp(pct); q('ckpi-change').className = 'kpi-val ' + (pct > 0 ? 'red' : 'green');
+      q('ckpi-risk').textContent = ins.risk; q('ckpi-risk').style.color = ins.risk_color; q('ckpi-r2').textContent = r2.toFixed(3);
+      q('ins-head').innerHTML = ins.headline; q('ins-detail').innerHTML = ins.detail; q('ins-rec').innerHTML = ins.recommendation;
+      const ch = q('risk-chip'); ch.textContent = ins.risk.toUpperCase(); ch.style.cssText = `background:${ins.risk_color}18;border:1px solid ${ins.risk_color};color:${ins.risk_color}`;
+      renderCTrend(cd); renderCGauge(cd); renderCFI(cd); renderCScatter(cd); renderCTable(cd);
+    }
+
+    function renderCTrend(cd) {
+      const fc = activeModel === 'rf' ? cd.rf_forecast : cd.lr_forecast, fcCol = activeModel === 'rf' ? C.accent : C.amber, tp = activeModel === 'rf' ? cd.rf_test : cd.lr_test;
+      const noise = Math.max(...cd.co2) * 0.06;
+      const tr = [{ x: cd.years, y: cd.co2, name: 'Actual', mode: 'lines', line: { color: C.texthi, width: 2 }, hovertemplate: '%{x}: <b>%{y:.1f} MT</b><extra>Actual</extra>' }];
+      if (cd.test_years?.length && tp?.length) tr.push({ x: cd.test_years, y: tp, name: 'Test fit', mode: 'lines', line: { color: fcCol, width: 1.4, dash: 'dot' } });
+      if (activeModel === 'rf') tr.push({ x: [...cd.forecast_years, ...cd.forecast_years.slice().reverse()], y: [...fc.map(v => v + noise), ...fc.map(v => v - noise).reverse()], fill: 'toself', fillcolor: 'rgba(0,229,176,.07)', line: { color: 'transparent' }, hoverinfo: 'skip', showlegend: false });
+      tr.push({ x: cd.forecast_years, y: fc, name: activeModel === 'rf' ? 'RF Forecast' : 'LR Forecast', mode: 'lines+markers', line: { color: fcCol, width: 2.2 }, marker: { size: 6, color: fcCol }, hovertemplate: '%{x}: <b>%{y:.1f} MT</b><extra>Forecast</extra>' });
+      Plotly.react('chart-country-trend', tr, { ...BL, yaxis: { ...BL.yaxis, title: 'MT CO₂' }, legend: { bgcolor: 'rgba(0,0,0,0)', font: { size: 9 } }, hovermode: 'x unified', shapes: [{ type: 'line', x0: cd.forecast_years[0], x1: cd.forecast_years[0], y0: 0, y1: 1, yref: 'paper', line: { color: C.red, width: 1, dash: 'dot' } }], annotations: [{ x: cd.forecast_years[0], y: 1, yref: 'paper', xanchor: 'left', showarrow: false, text: ' Forecast →', font: { color: C.red, size: 9, family: C.font } }] }, cfg);
+    }
+    function renderCGauge(cd) {
+      const val = cd.co2.at(-1) || 0, maxV = Math.max(...cd.co2) * 1.2, p = val / maxV, col = p > .75 ? C.red : p > .5 ? C.amber : C.accent;
+      Plotly.react('chart-country-gauge', [{ type: 'indicator', mode: 'gauge+number', value: val, number: { suffix: ' MT', font: { size: 20, family: C.font, color: C.texthi } }, gauge: { axis: { range: [0, maxV], tickfont: { size: 8, family: C.font } }, bar: { color: col }, bgcolor: 'rgba(0,0,0,0)', borderwidth: 0, steps: [{ range: [0, maxV * .5], color: 'rgba(0,229,176,.05)' }, { range: [maxV * .5, maxV * .75], color: 'rgba(255,190,77,.05)' }, { range: [maxV * .75, maxV], color: 'rgba(255,64,96,.08)' }] }, title: { text: 'Latest CO₂', font: { family: C.font, color: C.textdim, size: 10 } } }], { ...BL, margin: { l: 14, r: 14, t: 24, b: 8 } }, cfg);
+    }
+    function renderCFI(cd) {
+      const LBL = { year: 'Year Trend', energy_per_capita: 'Energy/Cap', gdp_per_capita: 'GDP/Cap', population: 'Population' };
+      const items = Object.entries(cd.feature_importances).sort((a, b) => a[1] - b[1]);
+      const mx = Math.max(...items.map(([, v]) => v));
+      Plotly.react('chart-country-fi', [{ type: 'bar', orientation: 'h', x: items.map(([, v]) => v), y: items.map(([k]) => LBL[k] || k), marker: { color: items.map(([, v]) => v === mx ? C.accent : '#1e3050') }, text: items.map(([, v]) => v.toFixed(3)), textfont: { family: C.font, color: C.text, size: 9 }, textposition: 'outside' }], { ...BL, margin: { l: 6, r: 44, t: 10, b: 16 }, xaxis: { ...BL.xaxis, visible: false }, yaxis: { ...BL.yaxis, tickfont: { size: 9, family: C.font } } }, cfg);
+    }
+    function renderCScatter(cd) {
+      const act = cd.co2.slice(cd.co2.length - cd.rf_test.length), lo = Math.min(...act, 0.1), hi = Math.max(...act);
+      Plotly.react('chart-country-scatter', [{ x: act, y: cd.rf_test, mode: 'markers', name: 'RF', marker: { color: C.accent, size: 5, opacity: .8 } }, { x: act, y: cd.lr_test, mode: 'markers', name: 'LR', marker: { color: C.amber, size: 5, opacity: .7 } }, { x: [lo, hi], y: [lo, hi], mode: 'lines', showlegend: false, line: { color: C.red, dash: 'dash', width: 1 } }], { ...BL, margin: { l: 40, r: 10, t: 10, b: 32 }, xaxis: { ...BL.xaxis, title: 'Actual' }, yaxis: { ...BL.yaxis, title: 'Predicted' }, legend: { bgcolor: 'rgba(0,0,0,0)', font: { size: 9 } } }, cfg);
+    }
+    function renderCTable(cd) {
+      const tb = q('fc-table-body'); tb.innerHTML = '';
+      const mx = Math.max(...cd.rf_forecast), mn = Math.min(...cd.rf_forecast);
+      cd.forecast_years.forEach((yr, i) => {
+        const rv = cd.rf_forecast[i], lv = cd.lr_forecast[i], hi = rv === mx, lo = rv === mn;
+        const tr = document.createElement('tr');
+        tr.innerHTML = `<td style="padding:7px 10px;border-bottom:1px solid var(--border);color:var(--textdim)">${yr}</td><td style="padding:7px 10px;border-bottom:1px solid var(--border);color:var(--accent);${hi ? 'background:rgba(255,64,96,.08)' : lo ? 'background:rgba(0,229,176,.06)' : ''}">${fn(rv, 2)}</td><td style="padding:7px 10px;border-bottom:1px solid var(--border);color:var(--amber)">${fn(lv, 2)}</td>`;
+        tb.appendChild(tr);
+      });
+    }
+
+    // ── COMPARE ───────────────────────────────────────────────────────
+    function toggleCmp(c) { if (compareList.includes(c)) compareList = compareList.filter(x => x !== c); else { if (compareList.length >= 4) { alert('Max 4 countries.'); return; } compareList.push(c); } syncSidebar(); updateChips(); if (q('tab-compare').classList.contains('active')) renderCompare(); }
+    function clearCompare() { compareList = []; syncSidebar(); updateChips(); renderCompare(); }
+    function updateChips() { const box = q('cmp-chips'); if (!compareList.length) { box.innerHTML = '<span class="cmp-hint">No countries selected</span>'; return; } box.innerHTML = compareList.map((c, i) => `<div class="cmp-chip" style="background:${PAL[i]}18;border-color:${PAL[i]};color:${PAL[i]}"><span>${c}</span><button class="chip-x" style="color:${PAL[i]}" onclick="toggleCmp('${c.replace(/'/g, "\\'")}')">✕</button></div>`).join(''); }
+    function filterCmpDd() { renderCmpDdList(q('cmp-input').value.toLowerCase()); }
+    function openCmpDd() { renderCmpDdList(q('cmp-input').value.toLowerCase()); q('cmp-dd-list').classList.add('open'); }
+    function closeCmpDd() { q('cmp-dd-list').classList.remove('open'); }
+    function renderCmpDdList(f) { const list = q('cmp-dd-list'); const m = D.countries.filter(c => c.toLowerCase().includes(f)).slice(0, 14); list.innerHTML = m.map(c => { const inn = compareList.includes(c), co2 = D.per_country[c]?.co2?.at(-1)?.toFixed(0) || '—'; return `<div class="cmp-dd-item${inn ? ' disabled' : ''}" onclick="${inn ? '' : ` addCmp('${c.replace(/'/g, "\\'")}') `}">${inn ? '✓ ' : ''}${c}<span class="ddval">${co2} MT</span></div>`; }).join(''); list.classList.add('open'); }
+    function addCmp(c) { if (compareList.length >= 4) { alert('Max 4.'); return; } if (!compareList.includes(c)) compareList.push(c); syncSidebar(); updateChips(); q('cmp-input').value = ''; closeCmpDd(); renderCompare(); }
+
+    function renderCompare() { const ok = compareList.length >= 2; q('cmp-placeholder').style.display = ok ? 'none' : ''; q('cmp-content').style.display = ok ? 'block' : 'none'; if (!ok) return; renderCmpTrend(); renderCmpLatest(); renderCmpFc(); renderCmpRadar(); renderCmpTable(); renderCmpPct(); }
+    function renderCmpTrend() { const tr = []; compareList.forEach((c, i) => { const cd = D.per_country[c]; if (!cd) return; tr.push({ x: cd.years, y: cd.co2, name: c, mode: 'lines', line: { color: PAL[i], width: 2 }, hovertemplate: `${c} %{x}: <b>%{y:.1f} MT</b><extra></extra>` }); tr.push({ x: cd.forecast_years, y: cd.rf_forecast, name: `${c} (fc)`, mode: 'lines+markers', line: { color: PAL[i], width: 1.8, dash: 'dash' }, marker: { size: 5, color: PAL[i] }, showlegend: false, hovertemplate: `${c} Fc %{x}: <b>%{y:.1f} MT</b><extra></extra>` }); }); const fy = D.per_country[compareList[0]]?.forecast_years; Plotly.react('chart-cmp-trend', tr, { ...BL, yaxis: { ...BL.yaxis, title: 'MT CO₂' }, legend: { bgcolor: 'rgba(0,0,0,0)', font: { size: 10 }, orientation: 'h', x: 0, y: 1.1 }, hovermode: 'x unified', shapes: fy ? [{ type: 'line', x0: fy[0], x1: fy[0], y0: 0, y1: 1, yref: 'paper', line: { color: 'rgba(255,255,255,.18)', width: 1, dash: 'dot' } }] : [] }, cfg); }
+    function renderCmpLatest() { const names = [], vals = [], cols = []; compareList.forEach((c, i) => { const cd = D.per_country[c]; if (!cd) return; names.push(c); vals.push(cd.co2.at(-1) || 0); cols.push(PAL[i]); }); Plotly.react('chart-cmp-latest', [{ type: 'bar', x: names, y: vals, marker: { color: cols }, text: vals.map(v => fn(v, 1) + ' MT'), textfont: { family: C.font, size: 10, color: C.texthi }, textposition: 'outside', hovertemplate: '%{x}: <b>%{y:.1f} MT</b><extra></extra>' }], { ...BL, margin: { l: 44, r: 14, t: 24, b: 54 }, yaxis: { ...BL.yaxis, title: 'MT CO₂' }, xaxis: { ...BL.xaxis, tickangle: -15 } }, cfg); }
+    function renderCmpFc() { const fy = D.per_country[compareList[0]]?.forecast_years || []; const tr = compareList.map((c, i) => { const cd = D.per_country[c]; if (!cd) return null; return { type: 'bar', name: c, x: fy.map(String), y: cd.rf_forecast, marker: { color: PAL[i] }, hovertemplate: `${c} %{x}: <b>%{y:.1f} MT</b><extra></extra>` }; }).filter(Boolean); Plotly.react('chart-cmp-fc', tr, { ...BL, barmode: 'group', yaxis: { ...BL.yaxis, title: 'MT CO₂' }, legend: { bgcolor: 'rgba(0,0,0,0)', font: { size: 9 }, orientation: 'h', x: 0, y: 1.1 }, margin: { l: 44, r: 14, t: 24, b: 32 } }, cfg); }
+    function renderCmpRadar() { const allCo2 = compareList.map(c => D.per_country[c]?.co2?.at(-1) || 0); const allPct = compareList.map(c => Math.abs(D.per_country[c]?.insight?.pct_change || 0)); const allR2 = compareList.map(c => Math.max(0, D.per_country[c]?.rf_r2 || 0)); const allPcap = compareList.map(c => D.per_country[c]?.co2_per_capita?.at(-1) || 0); const norm = (arr, v) => Math.max(...arr) > 0 ? v / Math.max(...arr) : 0; const theta = ['CO₂ Level', 'Forecast Δ', 'Model R²', 'Per Capita', 'CO₂ Level']; const tr = compareList.map((c, i) => { const r = [norm(allCo2, allCo2[i]), norm(allPct, allPct[i]), norm(allR2, allR2[i]), norm(allPcap, allPcap[i]), norm(allCo2, allCo2[i])]; return { type: 'scatterpolar', r, theta, fill: 'toself', fillcolor: PAL[i] + '22', name: c, line: { color: PAL[i], width: 2 } }; }); Plotly.react('chart-cmp-radar', tr, { ...BL, polar: { bgcolor: C.surf, radialaxis: { visible: true, range: [0, 1], tickfont: { size: 8, family: C.font }, gridcolor: C.grid }, angularaxis: { tickfont: { size: 9, family: C.font }, gridcolor: C.grid } }, margin: { l: 36, r: 36, t: 26, b: 26 }, legend: { bgcolor: 'rgba(0,0,0,0)', font: { size: 9 }, x: 0, y: 1.12, orientation: 'h' } }, cfg); }
+    function renderCmpTable() { const tb = q('cmp-tbody'); tb.innerHTML = ''; compareList.forEach((c, i) => { const cd = D.per_country[c]; if (!cd) return; const pct = cd.insight.pct_change, pCol = pct > 0 ? C.red : C.accent, rCol = cd.insight.risk_color; const tr = document.createElement('tr'); tr.innerHTML = `<td><span style="display:inline-block;width:10px;height:10px;border-radius:50%;background:${PAL[i]};margin-right:6px;vertical-align:middle"></span><strong style="color:${PAL[i]}">${c}</strong></td><td class="td-mono">${fn(cd.co2.at(-1), 1)}</td><td class="td-mono">${fn(cd.rf_forecast.at(-1), 1)}</td><td class="td-mono" style="color:${pCol}">${fp(pct)}</td><td class="td-mono">${cd.rf_r2.toFixed(3)}</td><td><span style="background:${rCol}18;border:1px solid ${rCol};color:${rCol};padding:2px 7px;border-radius:12px;font-family:var(--mono);font-size:9px">${cd.insight.risk}</span></td>`; tb.appendChild(tr); }); }
+    function renderCmpPct() { const box = q('cmp-pct-bars'); box.innerHTML = ''; const pcts = compareList.map(c => D.per_country[c]?.insight?.pct_change || 0); const mx = Math.max(...pcts.map(Math.abs), 0.1); compareList.forEach((c, i) => { const pct = pcts[i], bW = (Math.abs(pct) / mx * 100).toFixed(1), bC = pct > 0 ? C.red : C.accent; box.innerHTML += `<div style="display:flex;align-items:center;gap:8px;margin-bottom:8px;font-size:11px"><span style="width:80px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:${PAL[i]}">${c}</span><div style="flex:1;height:6px;background:var(--s3);border-radius:3px"><div style="width:${bW}%;height:100%;background:${bC};border-radius:3px"></div></div><span style="font-family:var(--mono);font-size:10px;color:${bC};width:44px;text-align:right">${(pct >= 0 ? '+' : '') + pct.toFixed(1)}%</span></div>`; }); }
+
+    // ── MAP ───────────────────────────────────────────────────────────
+    function setMapMode(m) { mapMode = m; q('map-mode-total').classList.toggle('active', m === 'total'); q('map-mode-percap').classList.toggle('active', m === 'percap'); renderMap(); }
+    function onMapYearChange() { mapYear = parseInt(q('map-year-slider').value); q('map-year-val').textContent = mapYear; renderMap(); }
+    function getMapYearData() { const av = Object.keys(D.year_map).map(Number).sort((a, b) => a - b); const nr = av.reduce((a, b) => Math.abs(b - mapYear) < Math.abs(a - mapYear) ? b : a); return D.year_map[String(nr)] || D.map; }
+    function renderMap() { const yd = getMapYearData(), vals = mapMode === 'percap' && D.map.co2_per_capita ? D.map.co2_per_capita : yd.co2, title = mapMode === 'percap' ? 'CO₂/Capita' : 'Total CO₂ (MT)'; Plotly.react('chart-map', [{ type: 'choropleth', locationmode: 'ISO-3', locations: yd.iso, z: vals, text: yd.country, colorscale: [[0, '#0d2f1a'], [.15, '#0a4a2a'], [.35, '#1a7a40'], [.55, '#f5a623'], [.75, '#e8460a'], [1, '#8b0000']], showscale: true, colorbar: { title: { text: title, font: { size: 9, family: C.font, color: C.text } }, tickfont: { size: 9, family: C.font, color: C.text }, bgcolor: C.bg, bordercolor: C.grid, len: .8 }, hovertemplate: '<b>%{text}</b><br>' + title + ': %{z:.1f}<extra></extra>', marker: { line: { color: C.grid, width: .5 } } }], { ...BL, margin: { l: 0, r: 0, t: 4, b: 4 }, geo: { showframe: false, showcoastlines: true, coastlinecolor: C.grid, bgcolor: C.bg, landcolor: '#111c2b', oceancolor: '#060b14', showocean: true, projection: { type: 'natural earth' }, lataxis: { range: [-75, 85] } } }, cfg); }
+    function renderTop10List() { const top10 = D.global.top10_countries, vals = top10.map(c => D.global.top10[c]?.co2?.at(-1) || 0), mx = Math.max(...vals); const list = q('top10-list'); list.innerHTML = ''; top10.forEach((c, i) => { const v = vals[i]; const el = document.createElement('div'); el.className = 'emitter-row'; el.innerHTML = `<span class="emitter-rank">${i + 1}</span><span class="emitter-name" onclick="selectCountry('${c}')">${c}</span><div class="emitter-bar-wrap"><div class="emitter-bar" style="width:${(v / mx * 100).toFixed(1)}%;background:${PAL[i]}"></div></div><span class="emitter-val">${fn(v, 0)}</span>`; list.appendChild(el); }); }
+    function renderTop10Trend() { const tr = D.global.top10_countries.map((c, i) => ({ x: D.global.top10[c].years, y: D.global.top10[c].co2, name: c, mode: 'lines', line: { color: PAL[i], width: 1.8 }, hovertemplate: `${c} %{x}: <b>%{y:.1f}</b><extra></extra>` })); Plotly.react('chart-top10', tr, { ...BL, yaxis: { ...BL.yaxis, title: 'MT CO₂' }, legend: { bgcolor: 'rgba(0,0,0,0)', font: { size: 8 }, x: 0, y: 1.08, orientation: 'h' }, hovermode: 'x unified' }, cfg); }
+    function renderMapKPIs() { q('kpi-global-total').textContent = fn(D.global.total_co2.at(-1), 0); q('kpi-top-emitter').textContent = D.global.top10_countries[0]; q('kpi-top-emitter-val').textContent = fn(D.global.top10[D.global.top10_countries[0]]?.co2?.at(-1), 0) + ' MT'; q('kpi-n-countries').textContent = D.meta.n_countries; q('kpi-year-range').textContent = D.meta.year_start + '–' + D.meta.year_end; q('kpi-data-year').textContent = D.meta.year_end; const av = Object.keys(D.year_map).map(Number).sort((a, b) => a - b); const sl = q('map-year-slider'); sl.min = av[0]; sl.max = av.at(-1); sl.value = av.at(-1); q('map-year-val').textContent = av.at(-1); }
+
+    // ── GLOBAL ────────────────────────────────────────────────────────
+    let gDone = false;
+    function renderGlobal() { if (gDone) return; gDone = true; const g = D.global, v0 = g.total_co2[0], vn = g.total_co2.at(-1), pct = ((vn - v0) / v0) * 100; q('gkpi-1990').textContent = fn(v0, 0); q('gkpi-latest').textContent = fn(vn, 0); q('gkpi-growth').textContent = (pct >= 0 ? '+' : '') + pct.toFixed(1) + '%'; q('gkpi-countries').textContent = D.meta.n_countries; Plotly.react('chart-global-total', [{ x: g.years, y: g.total_co2, mode: 'lines', line: { color: C.accent, width: 2.5 }, fill: 'tozeroy', fillcolor: 'rgba(0,229,176,.06)', hovertemplate: '%{x}: <b>%{y:.0f} MT</b><extra>Global</extra>' }], { ...BL, yaxis: { ...BL.yaxis, title: 'MT CO₂' }, hovermode: 'x unified', margin: { l: 56, r: 14, t: 16, b: 32 } }, cfg); const top10 = g.top10_countries, lv = top10.map(c => g.top10[c]?.co2?.at(-1) || 0), oth = Math.max(0, vn - lv.reduce((a, b) => a + b, 0)); Plotly.react('chart-top10-pie', [{ type: 'pie', labels: [...top10, 'Rest of World'], values: [...lv, oth], marker: { colors: [...PAL, '#2a3a54'] }, textfont: { family: C.font, size: 9 }, hovertemplate: '<b>%{label}</b><br>%{value:.0f} MT · %{percent}<extra></extra>', hole: .38 }], { ...BL, margin: { l: 10, r: 10, t: 10, b: 10 }, legend: { bgcolor: 'rgba(0,0,0,0)', font: { size: 9 }, x: 1, y: .5 } }, cfg); const tr10 = top10.map((c, i) => ({ x: g.top10[c].years, y: g.top10[c].co2, name: c, mode: 'lines', line: { color: PAL[i], width: 1.8 }, hovertemplate: `${c} %{x}: <b>%{y:.1f}</b><extra></extra>` })); Plotly.react('chart-global-lines', tr10, { ...BL, yaxis: { ...BL.yaxis, title: 'MT CO₂' }, legend: { bgcolor: 'rgba(0,0,0,0)', font: { size: 8 }, x: 0, y: 1.08, orientation: 'h' }, hovermode: 'x unified' }, cfg); }
+
+    // ── CHAT ──────────────────────────────────────────────────────────
+    const CHAT_URL = 'http://localhost:5500';
+    const SUGGESTIONS = ['🌍 Which country emits the most CO₂?', '📈 Compare China vs India vs USA', '📉 Countries reducing emissions?', '🔢 Current global total CO₂?', '🚀 Fastest growing emitter?', '🇩🇪 What drives Germany\'s emissions?', '⏱️ Top 5 emitters with forecasts?', '🌿 Net zero — which countries are closest?'];
+    function buildSugg() { q('sugg-grid').innerHTML = SUGGESTIONS.map(s => `<button class="sugg-btn" onclick="useSugg(${JSON.stringify(s)})">${s}</button>`).join(''); }
+    function useSugg(t) { q('chat-input').value = t; sendMsg(); }
+    function chatKey(e) { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); sendMsg(); } }
+    async function checkServer() { const dot = q('chat-dot'), txt = q('chat-status'), btn = q('btn-send'); dot.className = 'sdot checking'; txt.textContent = 'Checking…'; try { const r = await fetch(CHAT_URL + '/ping', { signal: AbortSignal.timeout(3000) }); const d = await r.json(); if (d.status === 'ok') { dot.className = 'sdot online'; txt.textContent = 'AI Chat — Online ✓'; txt.style.color = 'var(--accent)'; btn.disabled = false; serverOnline = true; } } catch (e) { dot.className = 'sdot offline'; txt.textContent = 'Server offline — run chatbot_server.py'; txt.style.color = 'var(--red)'; btn.disabled = true; serverOnline = false; } }
+    function dataSummary() { const out = { meta: D.meta, global: { total_1990: D.global.total_co2[0], total_latest: D.global.total_co2.at(-1), top10: D.global.top10_countries }, countries: {} }; D.countries.forEach(c => { const cd = D.per_country[c]; if (!cd) return; out.countries[c] = { iso: cd.iso, latest_co2: cd.co2.at(-1), forecast_end: cd.rf_forecast.at(-1), pct_change: cd.insight?.pct_change, risk: cd.insight?.risk, rf_r2: cd.rf_r2, top_driver: cd.insight?.top_factor }; }); return JSON.stringify(out); }
+    function systemPrompt() { return `You are an expert climate data analyst for a Carbon Emission Dashboard.\nYou have CO₂ data for ${D.meta.n_countries} countries (${D.meta.year_start}–${D.meta.year_end}) with ${D.meta.forecast_years}-year ML forecasts.\n\nDATA:\n${dataSummary()}\n\nRules: Use exact numbers from data. Be concise. Use **bold** for key names/numbers. Use bullet lists for comparisons. State if a country is not in the dataset.`; }
+    function addBubble(role, html) { const msgs = q('chat-messages'); const div = document.createElement('div'); div.className = `bubble ${role}`; const lbl = role === 'user' ? 'You' : role === 'ai' ? 'Carbon AI' : ''; if (lbl) div.innerHTML = `<div class="bubble-lbl">${lbl}</div>`; if (role === 'ai') div.innerHTML += md(html); else if (role === 'user') div.innerHTML += esc(html); else div.innerHTML += html; msgs.insertBefore(div, q('typing')); msgs.scrollTop = msgs.scrollHeight; }
+    function showTyping() { q('typing').style.display = 'block'; q('chat-messages').scrollTop = q('chat-messages').scrollHeight; }
+    function hideTyping() { q('typing').style.display = 'none'; }
+    function clearChat() { chatHistory = []; q('chat-messages').querySelectorAll('.bubble:not(:first-child)').forEach(b => b.remove()); hideTyping(); }
+    function esc(t) { return t.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;'); }
+    function md(t) { return esc(t).replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>').replace(/\*(.+?)\*/g, '<em>$1</em>').replace(/`(.+?)`/g, '<code style="font-family:var(--mono);font-size:11px;background:var(--s3);padding:1px 5px;border-radius:3px">$1</code>').replace(/^- (.+)$/gm, '<li>$1</li>').replace(/(<li>[\s\S]*?<\/li>)+/g, '<ul style="margin:6px 0 6px 16px">$&</ul>').replace(/\n\n/g, '<br/><br/>').replace(/\n/g, '<br/>'); }
+    async function sendMsg() { if (busy) return; const inp = q('chat-input'), msg = inp.value.trim(); if (!msg) return; if (!serverOnline) { addBubble('err', '⚠️ Server offline. Run <code>python chatbot_server.py</code> then open <code>http://localhost:5500</code>'); return; } busy = true; q('btn-send').disabled = true; addBubble('user', msg); inp.value = ''; showTyping(); const messages = [...chatHistory, { role: 'user', content: msg }]; try { const r = await fetch(CHAT_URL + '/chat', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ model: 'gemini-2.0-flash', max_tokens: 1024, system: systemPrompt(), messages }) }); const data = await r.json(); if (data.error) throw new Error(data.error); const reply = data.content?.find(b => b.type === 'text')?.text || 'No response.'; chatHistory.push({ role: 'user', content: msg }, { role: 'assistant', content: reply }); if (chatHistory.length > 20) chatHistory = chatHistory.slice(-20); hideTyping(); addBubble('ai', reply); } catch (e) { hideTyping(); addBubble('err', `❌ ${esc(e.message)}`); } finally { busy = false; q('btn-send').disabled = false; inp.focus(); } }
+
+    // ── INIT ──────────────────────────────────────────────────────────
+    function init() {
+      q('footer-date').textContent = new Date().toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
+      q('sb-meta').textContent = `${D.meta.n_countries} countries · ${D.meta.year_start}–${D.meta.year_end}`;
+      q('pg-meta').innerHTML = `${D.meta.n_countries} countries · ${D.meta.year_start}–${D.meta.year_end}<br>Forecast +${D.meta.forecast_years} yrs · RF + LR`;
+      q('ai-count').textContent = D.meta.n_countries; q('ai-range').textContent = `${D.meta.year_start}–${D.meta.year_end}`;
+      buildList(); updateChips(); renderMapKPIs(); renderMap(); renderTop10List(); renderTop10Trend(); buildSugg();
+      if (D.countries.length) { activeCountry = D.countries[0]; syncSidebar(); }
+    }
+    window.addEventListener('load', init);
+  </script>
+</body>
+
+</html>

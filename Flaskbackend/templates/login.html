@@ -1,0 +1,17 @@
+<!DOCTYPE html>
+<html><head><title>Login — Carbon Dashboard</title><style>
+*{margin:0;padding:0;box-sizing:border-box}body{font-family:system-ui;background:#07090f;color:#9ab0cc;display:flex;align-items:center;justify-content:center;min-height:100vh}
+.login-box{background:#0d1117;border:1px solid #1e2d42;border-radius:12px;padding:40px;width:360px;box-shadow:0 8px 24px rgba(0,0,0,.3)}
+h1{color:#00e5b0;font-size:24px;margin-bottom:8px;text-align:center}p{font-size:13px;color:#4a6080;text-align:center;margin-bottom:30px}
+label{display:block;font-size:12px;font-weight:600;margin-bottom:6px;color:#9ab0cc}
+input{width:100%;padding:10px 12px;background:#131a24;border:1px solid #263852;border-radius:8px;color:#ddeeff;font-size:14px;margin-bottom:16px;outline:none;transition:border .2s}
+input:focus{border-color:#00e5b0}
+button{width:100%;padding:12px;background:#00e5b0;color:#07090f;border:none;border-radius:8px;font-size:14px;font-weight:700;cursor:pointer;transition:background .2s}
+button:hover{background:#00a880}
+.flash{padding:10px;background:rgba(255,64,96,.1);border:1px solid #ff4060;border-radius:6px;color:#ff4060;font-size:13px;margin-bottom:16px;text-align:center}
+.footer{margin-top:20px;text-align:center;font-size:11px;color:#4a6080}
+</style></head><body><div class="login-box"><h1>🌍 Carbon Dashboard</h1><p>Admin Login</p>
+{% with messages = get_flashed_messages() %}{% if messages %}<div class="flash">{{ messages[0] }}</div>{% endif %}{% endwith %}
+<form method="post"><label>Username</label><input type="text" name="username" required autofocus>
+<label>Password</label><input type="password" name="password" required><button type="submit">Login</button></form>
+<div class="footer">Full-Stack Edition · Flask + MySQL</div></div></body></html>
