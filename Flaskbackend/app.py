@@ -183,6 +183,10 @@ def get_dashboard_data():
 
 @app.route('/login', methods=['GET', 'POST'])
 def login():
+    if request.args.get('fresh') == '1':
+        logout_user()
+        session.clear()
+        return redirect(url_for('login'))
     if current_user.is_authenticated:
         return redirect(url_for('dashboard'))
     if request.method == 'POST':
@@ -190,7 +194,7 @@ def login():
         password = request.form.get('password')
         user = User.query.filter_by(username=username).first()
         if user and user.check_password(password):
-            login_user(user, remember=True)
+            login_user(user, remember=False)
             user.last_login = datetime.utcnow()
             db.session.commit()
             next_page = request.args.get('next')
@@ -365,7 +369,7 @@ def admin_retrain_models():
 
 # ── Run ────────────────────────────────────────────────────────────────────────
 def open_browser():
-    webbrowser.open_new("http://localhost:5000")
+    webbrowser.open_new("http://localhost:5000/login?fresh=1")
 
 if __name__ == '__main__':
     os.makedirs(app.config['UPLOAD_FOLDER'], exist_ok=True)

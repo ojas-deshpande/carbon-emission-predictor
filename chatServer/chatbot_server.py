@@ -185,21 +185,12 @@ class Handler(BaseHTTPRequestHandler):
     def do_GET(self):
         path = self.path.split("?")[0]
 
-        # Serve dashboard
+        # Keep dashboard access behind Flask-Login. The chat server only
+        # exposes AI endpoints; opening it in a browser sends users to Flask.
         if path in ("/", "/index.html"):
-            try:
-                content = open(_INDEX_HTML, "rb").read()
-                self.send_response(200)
-                self.send_header("Content-Type",   "text/html; charset=utf-8")
-                self.send_header("Content-Length", str(len(content)))
-                self.send_cors()
-                self.end_headers()
-                self.wfile.write(content)
-            except FileNotFoundError:
-                self._send_json(
-                    {"error": "index.html not found. Run: python generate_data.py"},
-                    status=404
-                )
+            self.send_response(302)
+            self.send_header("Location", "http://localhost:5000/login?next=/")
+            self.end_headers()
             return
 
         # Health check — dashboard uses this to show online/offline dot
@@ -308,9 +299,9 @@ if __name__ == "__main__":
     print()
     print(f"  [OK] Server running at  ->  http://localhost:{PORT}")
     print(f"  [AI] Model              ->  Google {GEMINI_MODEL} (FREE)")
-    print(f"  [DB] Dashboard          ->  http://localhost:{PORT}")
+    print("  [DB] Dashboard          ->  http://localhost:5000/login")
     print()
-    print("  Open the URL above in your browser.")
+    print("  Keep this server running, then use the Flask dashboard URL above.")
     print("  Go to the AI Chat tab to start chatting.")
     print()
     print("  Press Ctrl+C to stop the server.")

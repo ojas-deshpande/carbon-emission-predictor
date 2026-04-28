@@ -34,6 +34,12 @@ This is a **Final Year BCA Project** at Tilak Maharashtra Vidyapeeth University.
 | 🆚 **Compare** | Compare up to 4 countries side-by-side with 5 charts |
 | 🌐 **Global Trends** | World total CO₂, top 10 pie chart, annual trend lines |
 | 🤖 **AI Chat** | Live chatbot that answers data questions using your actual numbers |
+| 🔍 **Data Explorer** | Interactive filters, range sliders, export to CSV/PNG |
+| 📤 **Export/Share** | Export current view data, share via link |
+| 🌫️ **AQI Metric** | Air Quality Index overlay on map |
+| 🔐 **Improved Login** | Fixed login redirection bug, persistent session |
+| ⚙️ **Config Persistence** | API key stored in config file, no manual input |
+| 🤖 **AI Model Update** | Updated to Anthropic Claude 1.5‑flash for reliability |
 
 ### Machine Learning
 - Random Forest Regressor (trend-residual approach for time series)
@@ -62,20 +68,21 @@ This is a **Final Year BCA Project** at Tilak Maharashtra Vidyapeeth University.
 ```
 carbon-emission-dashboard/
 │
-├── index.html                  # Dashboard — open this in your browser
-├── _template.html              # UI template (edit this for design changes)
-├── generate_data.py            # Main script — runs pipeline → builds index.html
-├── data_pipeline.py            # Data loading, cleaning, feature engineering
-├── ml_models.py                # RF + LR model training
-├── insights.py                 # Auto-generates insight text per country
-├── chatbot_server.py           # Local proxy server for AI Chat tab
-├── requirements.txt            # ML dependencies
-│
-└── backend/
-    ├── app.py                  # Flask application (all routes and API)
-    ├── models.py               # SQLAlchemy database models (7 tables)
-    ├── config.py               # Database connection settings
-    ├── init_db.py              # One-time database setup script
+├── README.md
+├── frontend/
+│   ├── index.html
+│   ├── _template.html
+│   ├── generate_data.py
+│   ├── data_pipeline.py
+│   ├── ml_models.py
+│   ├── insights.py
+│   ├── chatbot_server.py
+│   └── requirements.txt
+└── Flaskbackend/
+    ├── app.py
+    ├── models.py
+    ├── config.py
+    ├── init_db.py
     └── requirements_backend.txt
 ```
 

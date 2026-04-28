@@ -1,4 +1,8 @@
 {
+    "python.analysis.extraPaths": [
+        "./ML pipeline",
+        "./Flaskbackend"
+    ],
     "python.testing.unittestArgs": [
         "-v",
         "-s",

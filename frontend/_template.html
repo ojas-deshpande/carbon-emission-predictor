@@ -531,6 +531,82 @@
       gap: 12px
     }
 
+    .aqi-panel {
+      display: grid;
+      grid-template-columns: 240px 1fr;
+      gap: 16px;
+      align-items: center
+    }
+
+    .aqi-ring {
+      width: 190px;
+      aspect-ratio: 1;
+      border-radius: 50%;
+      display: grid;
+      place-items: center;
+      margin: 0 auto;
+      background: conic-gradient(var(--accent) 0deg, var(--s3) 0deg);
+      box-shadow: inset 0 0 24px rgba(0, 0, 0, .45)
+    }
+
+    .aqi-ring-inner {
+      width: 132px;
+      aspect-ratio: 1;
+      border-radius: 50%;
+      background: var(--surface);
+      border: 1px solid var(--border);
+      display: grid;
+      place-items: center;
+      text-align: center
+    }
+
+    .aqi-score {
+      font-family: var(--mono);
+      font-size: 34px;
+      font-weight: 700;
+      color: var(--texthi)
+    }
+
+    .aqi-label {
+      font-family: var(--mono);
+      font-size: 9px;
+      letter-spacing: .16em;
+      color: var(--textdim);
+      text-transform: uppercase
+    }
+
+    .aqi-actions {
+      display: flex;
+      gap: 8px;
+      flex-wrap: wrap;
+      margin-top: 14px
+    }
+
+    .mixer-row {
+      display: grid;
+      grid-template-columns: 150px 1fr 44px;
+      gap: 10px;
+      align-items: center;
+      margin-bottom: 12px;
+      font-size: 11px;
+      color: var(--text)
+    }
+
+    .mixer-row input {
+      accent-color: var(--accent)
+    }
+
+    .aqi-table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 12px
+    }
+
+    .aqi-table td {
+      padding: 7px 8px;
+      border-bottom: 1px solid var(--border)
+    }
+
     /* ── INSIGHT BOX ─────────────────────── */
     .insight {
       background: linear-gradient(135deg, var(--surface), var(--s2));
@@ -1245,6 +1321,10 @@
         gap: 12px
       }
 
+      .aqi-panel {
+        grid-template-columns: 1fr
+      }
+
       .pg-meta {
         display: none
       }
@@ -1314,6 +1394,18 @@
 
       .card {
         padding: 14px
+      }
+
+      .aqi-ring {
+        width: 160px
+      }
+
+      .aqi-ring-inner {
+        width: 112px
+      }
+
+      .mixer-row {
+        grid-template-columns: 112px 1fr 42px
       }
 
       .insight {
@@ -1425,7 +1517,10 @@
         <div style="font-size:12px;color:var(--textdim);margin-top:3px;font-family:var(--mono)">Historical · ML Forecast
           · AI Assistant</div>
       </div>
-      <div class="pg-meta" id="pg-meta">—</div>
+      <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;justify-content:flex-end">
+        <div class="pg-meta" id="pg-meta">—</div>
+        <a class="btn-sm" href="/logout" style="text-decoration:none">Logout</a>
+      </div>
     </div>
 
     <div class="tabs">
@@ -1433,6 +1528,7 @@
       <button class="tab-btn" onclick="switchTab('country')">📊 Country</button>
       <button class="tab-btn" onclick="switchTab('compare')">🆚 Compare</button>
       <button class="tab-btn" onclick="switchTab('global')">🌐 Global</button>
+      <button class="tab-btn" onclick="switchTab('aqi')">🌫️ AQI Index</button>
       <button class="tab-btn" onclick="switchTab('chat')">🤖 AI Chat</button>
     </div>
 
@@ -1470,6 +1566,7 @@
         <div style="display:flex;gap:8px;flex-wrap:wrap">
           <button class="model-btn active" id="map-mode-total" onclick="setMapMode('total')">Total CO₂</button>
           <button class="model-btn" id="map-mode-percap" onclick="setMapMode('percap')">Per Capita</button>
+          <button class="model-btn" id="map-mode-aqi" onclick="setMapMode('aqi')">AQI Index</button>
         </div>
       </div>
       <div class="card">
@@ -1683,6 +1780,89 @@
       </div>
     </div>
 
+    <!-- ════ TAB: AQI INDEX ════ -->
+    <div class="tab-panel" id="tab-aqi">
+      <div class="kpi-row">
+        <div class="kpi">
+          <div class="kpi-lbl">Avg AQI</div>
+          <div class="kpi-val green" id="aqikpi-avg">—</div>
+          <div class="kpi-sub">estimated index</div>
+        </div>
+        <div class="kpi">
+          <div class="kpi-lbl">Highest</div>
+          <div class="kpi-val red" id="aqikpi-high">—</div>
+          <div class="kpi-sub" id="aqikpi-high-name">—</div>
+        </div>
+        <div class="kpi">
+          <div class="kpi-lbl">Improving</div>
+          <div class="kpi-val blue" id="aqikpi-cleaner">—</div>
+          <div class="kpi-sub">forecast decline</div>
+        </div>
+        <div class="kpi">
+          <div class="kpi-lbl">Selected</div>
+          <div class="kpi-val amber" id="aqikpi-selected">—</div>
+          <div class="kpi-sub" id="aqikpi-selected-cat">—</div>
+        </div>
+      </div>
+      <div class="grid-2">
+        <div class="card">
+          <div class="card-title">Country AQI Profile</div>
+          <div class="aqi-panel">
+            <div class="aqi-ring" id="aqi-ring">
+              <div class="aqi-ring-inner">
+                <div>
+                  <div class="aqi-label">Estimated AQI</div>
+                  <div class="aqi-score" id="aqi-score">—</div>
+                  <div class="aqi-label" id="aqi-category">—</div>
+                </div>
+              </div>
+            </div>
+            <div>
+              <div style="font-size:18px;font-weight:600;color:var(--texthi)" id="aqi-country">—</div>
+              <div style="font-size:12px;color:var(--textdim);margin-top:6px;line-height:1.65" id="aqi-explain">—</div>
+              <div class="aqi-actions">
+                <button class="btn-sm" onclick="askAqiAboutCountry()">Ask AI</button>
+                <button class="btn-sm" onclick="switchTab('country')">Open Country</button>
+                <button class="btn-sm" onclick="setMapMode('aqi');switchTab('map')">Map AQI</button>
+              </div>
+            </div>
+          </div>
+        </div>
+        <div class="card">
+          <div class="card-title">Policy Mixer</div>
+          <div class="mixer-row"><span>Energy cut</span><input type="range" id="mix-energy" min="0" max="45" value="18" oninput="updateMixer()" /><strong id="mix-energy-v">18%</strong></div>
+          <div class="mixer-row"><span>Clean power</span><input type="range" id="mix-power" min="0" max="45" value="22" oninput="updateMixer()" /><strong id="mix-power-v">22%</strong></div>
+          <div class="mixer-row"><span>Transport shift</span><input type="range" id="mix-transport" min="0" max="35" value="12" oninput="updateMixer()" /><strong id="mix-transport-v">12%</strong></div>
+          <div style="display:flex;align-items:center;justify-content:space-between;gap:12px;margin-top:18px">
+            <div>
+              <div style="font-family:var(--mono);font-size:9px;letter-spacing:.14em;color:var(--textdim);text-transform:uppercase">Projected AQI</div>
+              <div style="font-family:var(--mono);font-size:28px;color:var(--accent);font-weight:700" id="mix-score">—</div>
+            </div>
+            <div style="flex:1;height:8px;background:var(--s3);border-radius:4px;overflow:hidden">
+              <div id="mix-bar" style="width:0;height:100%;background:var(--accent)"></div>
+            </div>
+          </div>
+          <div style="font-size:11px;color:var(--textdim);line-height:1.6;margin-top:14px" id="mix-note">—</div>
+        </div>
+      </div>
+      <div class="grid-2" style="margin-top:14px">
+        <div class="card" style="margin-bottom:0">
+          <div class="card-title">AQI Ranking</div>
+          <div id="chart-aqi-rank" style="height:min(320px,70vw)"></div>
+        </div>
+        <div class="card" style="margin-bottom:0">
+          <div class="card-title">Air Stress Map</div>
+          <div id="chart-aqi-map" style="height:min(320px,70vw)"></div>
+        </div>
+      </div>
+      <div class="card" style="margin-top:14px">
+        <div class="card-title">Most Urgent AQI Signals</div>
+        <div style="overflow-x:auto">
+          <table class="aqi-table"><tbody id="aqi-table-body"></tbody></table>
+        </div>
+      </div>
+    </div>
+
     <!-- ════ TAB: AI CHAT ════ -->
     <div class="tab-panel" id="tab-chat">
       <div class="chat-layout">
@@ -1750,12 +1930,13 @@
     function closeSidebar() { q('sidebar').classList.remove('mobile-open'); q('sidebar-overlay').classList.remove('open'); }
 
     // ── TABS ──────────────────────────────────────────────────────────
-    const TABS = ['map', 'country', 'compare', 'global', 'chat'];
+    const TABS = ['map', 'country', 'compare', 'global', 'aqi', 'chat'];
     function switchTab(name) {
       document.querySelectorAll('.tab-btn').forEach((b, i) => b.classList.toggle('active', TABS[i] === name));
       document.querySelectorAll('.tab-panel').forEach(p => p.classList.toggle('active', p.id === 'tab-' + name));
-      q('sb-mode-lbl').textContent = name === 'compare' ? 'Countries (⊕ to compare)' : 'Select Country';
+      q('sb-mode-lbl').textContent = name === 'compare' ? 'Countries (⊕ to compare)' : name === 'aqi' ? 'Select AQI Country' : 'Select Country';
       if (name === 'global') renderGlobal();
+      if (name === 'aqi') renderAqi();
       if (name === 'compare') renderCompare();
       if (name === 'map') renderMap();
       if (name === 'chat') checkServer();
@@ -1856,11 +2037,55 @@
     function renderCmpTable() { const tb = q('cmp-tbody'); tb.innerHTML = ''; compareList.forEach((c, i) => { const cd = D.per_country[c]; if (!cd) return; const pct = cd.insight.pct_change, pCol = pct > 0 ? C.red : C.accent, rCol = cd.insight.risk_color; const tr = document.createElement('tr'); tr.innerHTML = `<td><span style="display:inline-block;width:10px;height:10px;border-radius:50%;background:${PAL[i]};margin-right:6px;vertical-align:middle"></span><strong style="color:${PAL[i]}">${c}</strong></td><td class="td-mono">${fn(cd.co2.at(-1), 1)}</td><td class="td-mono">${fn(cd.rf_forecast.at(-1), 1)}</td><td class="td-mono" style="color:${pCol}">${fp(pct)}</td><td class="td-mono">${cd.rf_r2.toFixed(3)}</td><td><span style="background:${rCol}18;border:1px solid ${rCol};color:${rCol};padding:2px 7px;border-radius:12px;font-family:var(--mono);font-size:9px">${cd.insight.risk}</span></td>`; tb.appendChild(tr); }); }
     function renderCmpPct() { const box = q('cmp-pct-bars'); box.innerHTML = ''; const pcts = compareList.map(c => D.per_country[c]?.insight?.pct_change || 0); const mx = Math.max(...pcts.map(Math.abs), 0.1); compareList.forEach((c, i) => { const pct = pcts[i], bW = (Math.abs(pct) / mx * 100).toFixed(1), bC = pct > 0 ? C.red : C.accent; box.innerHTML += `<div style="display:flex;align-items:center;gap:8px;margin-bottom:8px;font-size:11px"><span style="width:80px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:${PAL[i]}">${c}</span><div style="flex:1;height:6px;background:var(--s3);border-radius:3px"><div style="width:${bW}%;height:100%;background:${bC};border-radius:3px"></div></div><span style="font-family:var(--mono);font-size:10px;color:${bC};width:44px;text-align:right">${(pct >= 0 ? '+' : '') + pct.toFixed(1)}%</span></div>`; }); }
 
+    // ── AQI INDEX ────────────────────────────────────────────────────
+    let aqiDone = false;
+    const clamp = (v, lo, hi) => Math.max(lo, Math.min(hi, v));
+    const latest = (cd, key) => cd?.[key]?.filter(v => v != null).at(-1) || 0;
+    function aqiCategory(score) { return score <= 50 ? 'Good' : score <= 100 ? 'Moderate' : score <= 150 ? 'Sensitive' : score <= 200 ? 'Unhealthy' : 'Very Unhealthy'; }
+    function aqiColor(score) { return score <= 50 ? '#18b96f' : score <= 100 ? '#b7d936' : score <= 150 ? C.amber : score <= 200 ? '#ff6b35' : '#b91c1c'; }
+    function aqiForCountry(country) {
+      const cd = D.per_country[country] || {};
+      const maxCo2 = Math.max(...D.countries.map(c => latest(D.per_country[c], 'co2')), 1);
+      const maxPc = Math.max(...D.countries.map(c => latest(D.per_country[c], 'co2_per_capita')), 1);
+      const maxEnergy = Math.max(...D.countries.map(c => latest(D.per_country[c], 'energy_pc')), 1);
+      const maxGrowth = Math.max(...D.countries.map(c => Math.max(0, D.per_country[c]?.insight?.pct_change || 0)), 1);
+      const total = latest(cd, 'co2') / maxCo2;
+      const perCapita = latest(cd, 'co2_per_capita') / maxPc;
+      const energy = latest(cd, 'energy_pc') / maxEnergy;
+      const growth = Math.max(0, cd.insight?.pct_change || 0) / maxGrowth;
+      const score = Math.round(25 + 275 * clamp(total * .28 + perCapita * .34 + energy * .24 + growth * .14, 0, 1));
+      return { score, category: aqiCategory(score), color: aqiColor(score), total, perCapita, energy, growth };
+    }
+    function rankedAqi() { return D.countries.map(c => ({ country: c, ...aqiForCountry(c) })).sort((a, b) => b.score - a.score); }
+    function renderAqi() {
+      if (!activeCountry && D.countries.length) activeCountry = D.countries[0];
+      const rows = rankedAqi(), selected = aqiForCountry(activeCountry), avg = Math.round(rows.reduce((s, r) => s + r.score, 0) / Math.max(rows.length, 1)), improving = D.countries.filter(c => (D.per_country[c]?.insight?.pct_change || 0) < 0).length;
+      q('aqikpi-avg').textContent = avg; q('aqikpi-high').textContent = rows[0]?.score || '—'; q('aqikpi-high-name').textContent = rows[0]?.country || '—'; q('aqikpi-cleaner').textContent = improving; q('aqikpi-selected').textContent = selected.score; q('aqikpi-selected-cat').textContent = selected.category;
+      q('aqi-country').textContent = activeCountry || '—'; q('aqi-score').textContent = selected.score; q('aqi-category').textContent = selected.category;
+      q('aqi-ring').style.background = `conic-gradient(${selected.color} ${selected.score / 300 * 360}deg, var(--s3) 0deg)`;
+      q('aqi-explain').innerHTML = `Built as an <strong>estimated AQI-style index</strong> from CO₂ level, CO₂ per person, energy use per person, and forecast growth. It is a comparative dashboard signal, not live pollutant monitoring.`;
+      const top = rows.slice(0, 12).reverse();
+      Plotly.react('chart-aqi-rank', [{ type: 'bar', orientation: 'h', x: top.map(r => r.score), y: top.map(r => r.country), marker: { color: top.map(r => r.color) }, text: top.map(r => r.category), textposition: 'auto', hovertemplate: '<b>%{y}</b><br>AQI: %{x}<extra></extra>' }], { ...BL, margin: { l: 104, r: 16, t: 12, b: 28 }, xaxis: { ...BL.xaxis, range: [0, 300], title: 'Estimated AQI' } }, cfg);
+      Plotly.react('chart-aqi-map', [{ type: 'choropleth', locationmode: 'ISO-3', locations: D.map.iso, z: D.map.country.map(c => aqiForCountry(c).score), text: D.map.country, zmin: 0, zmax: 300, colorscale: [[0, '#18b96f'], [.25, '#b7d936'], [.5, '#ffbe4d'], [.7, '#ff6b35'], [1, '#b91c1c']], colorbar: { title: { text: 'AQI', font: { size: 9, family: C.font, color: C.text } }, tickfont: { size: 9, family: C.font, color: C.text } }, hovertemplate: '<b>%{text}</b><br>Estimated AQI: %{z}<extra></extra>', marker: { line: { color: C.grid, width: .5 } } }], { ...BL, margin: { l: 0, r: 0, t: 4, b: 4 }, geo: { showframe: false, showcoastlines: true, coastlinecolor: C.grid, bgcolor: C.bg, landcolor: '#111c2b', oceancolor: '#060b14', showocean: true, projection: { type: 'natural earth' } } }, cfg);
+      q('aqi-table-body').innerHTML = rows.slice(0, 10).map((r, i) => `<tr onclick="selectCountry('${r.country.replace(/'/g, "\\'")}');switchTab('aqi')" style="cursor:pointer"><td style="color:var(--textdim);font-family:var(--mono)">#${i + 1}</td><td><strong style="color:var(--texthi)">${r.country}</strong></td><td style="font-family:var(--mono);color:${r.color}">${r.score}</td><td>${r.category}</td><td style="color:var(--textdim)">CO₂ ${fn(latest(D.per_country[r.country], 'co2'), 0)} MT · ${fn(latest(D.per_country[r.country], 'co2_per_capita'), 2)} t/person</td></tr>`).join('');
+      updateMixer();
+      aqiDone = true;
+    }
+    function updateMixer() {
+      const base = aqiForCountry(activeCountry || D.countries[0]).score;
+      const e = +q('mix-energy').value, p = +q('mix-power').value, t = +q('mix-transport').value;
+      q('mix-energy-v').textContent = e + '%'; q('mix-power-v').textContent = p + '%'; q('mix-transport-v').textContent = t + '%';
+      const reduction = e * .36 + p * .42 + t * .22, score = Math.max(15, Math.round(base * (1 - reduction / 100)));
+      q('mix-score').textContent = score; q('mix-score').style.color = aqiColor(score); q('mix-bar').style.width = `${clamp(score / 300 * 100, 2, 100)}%`; q('mix-bar').style.background = aqiColor(score);
+      q('mix-note').textContent = `${activeCountry || D.countries[0]} could move from ${base} (${aqiCategory(base)}) to ${score} (${aqiCategory(score)}) under this scenario.`;
+    }
+    function askAqiAboutCountry() { useSugg(`Explain the estimated AQI index for ${activeCountry}. What drives it and what policies would improve it?`); }
+
     // ── MAP ───────────────────────────────────────────────────────────
-    function setMapMode(m) { mapMode = m; q('map-mode-total').classList.toggle('active', m === 'total'); q('map-mode-percap').classList.toggle('active', m === 'percap'); renderMap(); }
+    function setMapMode(m) { mapMode = m; q('map-mode-total').classList.toggle('active', m === 'total'); q('map-mode-percap').classList.toggle('active', m === 'percap'); q('map-mode-aqi').classList.toggle('active', m === 'aqi'); renderMap(); }
     function onMapYearChange() { mapYear = parseInt(q('map-year-slider').value); q('map-year-val').textContent = mapYear; renderMap(); }
     function getMapYearData() { const av = Object.keys(D.year_map).map(Number).sort((a, b) => a - b); const nr = av.reduce((a, b) => Math.abs(b - mapYear) < Math.abs(a - mapYear) ? b : a); return D.year_map[String(nr)] || D.map; }
-    function renderMap() { const yd = getMapYearData(), vals = mapMode === 'percap' && D.map.co2_per_capita ? D.map.co2_per_capita : yd.co2, title = mapMode === 'percap' ? 'CO₂/Capita' : 'Total CO₂ (MT)'; Plotly.react('chart-map', [{ type: 'choropleth', locationmode: 'ISO-3', locations: yd.iso, z: vals, text: yd.country, colorscale: [[0, '#0d2f1a'], [.15, '#0a4a2a'], [.35, '#1a7a40'], [.55, '#f5a623'], [.75, '#e8460a'], [1, '#8b0000']], showscale: true, colorbar: { title: { text: title, font: { size: 9, family: C.font, color: C.text } }, tickfont: { size: 9, family: C.font, color: C.text }, bgcolor: C.bg, bordercolor: C.grid, len: .8 }, hovertemplate: '<b>%{text}</b><br>' + title + ': %{z:.1f}<extra></extra>', marker: { line: { color: C.grid, width: .5 } } }], { ...BL, margin: { l: 0, r: 0, t: 4, b: 4 }, geo: { showframe: false, showcoastlines: true, coastlinecolor: C.grid, bgcolor: C.bg, landcolor: '#111c2b', oceancolor: '#060b14', showocean: true, projection: { type: 'natural earth' }, lataxis: { range: [-75, 85] } } }, cfg); }
+    function renderMap() { const yd = mapMode === 'aqi' ? D.map : getMapYearData(), vals = mapMode === 'aqi' ? yd.country.map(c => aqiForCountry(c).score) : mapMode === 'percap' && D.map.co2_per_capita ? D.map.co2_per_capita : yd.co2, title = mapMode === 'aqi' ? 'Estimated AQI' : mapMode === 'percap' ? 'CO₂/Capita' : 'Total CO₂ (MT)', scale = mapMode === 'aqi' ? [[0, '#18b96f'], [.25, '#b7d936'], [.5, '#ffbe4d'], [.7, '#ff6b35'], [1, '#b91c1c']] : [[0, '#0d2f1a'], [.15, '#0a4a2a'], [.35, '#1a7a40'], [.55, '#f5a623'], [.75, '#e8460a'], [1, '#8b0000']]; Plotly.react('chart-map', [{ type: 'choropleth', locationmode: 'ISO-3', locations: yd.iso, z: vals, text: yd.country, colorscale: scale, zmin: mapMode === 'aqi' ? 0 : undefined, zmax: mapMode === 'aqi' ? 300 : undefined, showscale: true, colorbar: { title: { text: title, font: { size: 9, family: C.font, color: C.text } }, tickfont: { size: 9, family: C.font, color: C.text }, bgcolor: C.bg, bordercolor: C.grid, len: .8 }, hovertemplate: '<b>%{text}</b><br>' + title + ': %{z:.1f}<extra></extra>', marker: { line: { color: C.grid, width: .5 } } }], { ...BL, margin: { l: 0, r: 0, t: 4, b: 4 }, geo: { showframe: false, showcoastlines: true, coastlinecolor: C.grid, bgcolor: C.bg, landcolor: '#111c2b', oceancolor: '#060b14', showocean: true, projection: { type: 'natural earth' }, lataxis: { range: [-75, 85] } } }, cfg); }
     function renderTop10List() { const top10 = D.global.top10_countries, vals = top10.map(c => D.global.top10[c]?.co2?.at(-1) || 0), mx = Math.max(...vals); const list = q('top10-list'); list.innerHTML = ''; top10.forEach((c, i) => { const v = vals[i]; const el = document.createElement('div'); el.className = 'emitter-row'; el.innerHTML = `<span class="emitter-rank">${i + 1}</span><span class="emitter-name" onclick="selectCountry('${c}')">${c}</span><div class="emitter-bar-wrap"><div class="emitter-bar" style="width:${(v / mx * 100).toFixed(1)}%;background:${PAL[i]}"></div></div><span class="emitter-val">${fn(v, 0)}</span>`; list.appendChild(el); }); }
     function renderTop10Trend() { const tr = D.global.top10_countries.map((c, i) => ({ x: D.global.top10[c].years, y: D.global.top10[c].co2, name: c, mode: 'lines', line: { color: PAL[i], width: 1.8 }, hovertemplate: `${c} %{x}: <b>%{y:.1f}</b><extra></extra>` })); Plotly.react('chart-top10', tr, { ...BL, yaxis: { ...BL.yaxis, title: 'MT CO₂' }, legend: { bgcolor: 'rgba(0,0,0,0)', font: { size: 8 }, x: 0, y: 1.08, orientation: 'h' }, hovermode: 'x unified' }, cfg); }
     function renderMapKPIs() { q('kpi-global-total').textContent = fn(D.global.total_co2.at(-1), 0); q('kpi-top-emitter').textContent = D.global.top10_countries[0]; q('kpi-top-emitter-val').textContent = fn(D.global.top10[D.global.top10_countries[0]]?.co2?.at(-1), 0) + ' MT'; q('kpi-n-countries').textContent = D.meta.n_countries; q('kpi-year-range').textContent = D.meta.year_start + '–' + D.meta.year_end; q('kpi-data-year').textContent = D.meta.year_end; const av = Object.keys(D.year_map).map(Number).sort((a, b) => a - b); const sl = q('map-year-slider'); sl.min = av[0]; sl.max = av.at(-1); sl.value = av.at(-1); q('map-year-val').textContent = av.at(-1); }
@@ -1871,13 +2096,13 @@
 
     // ── CHAT ──────────────────────────────────────────────────────────
     const CHAT_URL = 'http://localhost:5500';
-    const SUGGESTIONS = ['🌍 Which country emits the most CO₂?', '📈 Compare China vs India vs USA', '📉 Countries reducing emissions?', '🔢 Current global total CO₂?', '🚀 Fastest growing emitter?', '🇩🇪 What drives Germany\'s emissions?', '⏱️ Top 5 emitters with forecasts?', '🌿 Net zero — which countries are closest?'];
-    function buildSugg() { q('sugg-grid').innerHTML = SUGGESTIONS.map(s => `<button class="sugg-btn" onclick="useSugg(${JSON.stringify(s)})">${s}</button>`).join(''); }
-    function useSugg(t) { q('chat-input').value = t; sendMsg(); }
+    const SUGGESTIONS = ['🌍 Which country emits the most CO₂?', '🌫️ Which countries have the highest estimated AQI?', '📈 Compare China vs India vs USA', '📉 Countries reducing emissions?', '🔢 Current global total CO₂?', '🚀 Fastest growing emitter?', '🇩🇪 What drives Germany\'s emissions?', '🌿 Net zero — which countries are closest?'];
+    function buildSugg() { const grid = q('sugg-grid'); grid.innerHTML = ''; SUGGESTIONS.forEach(s => { const btn = document.createElement('button'); btn.className = 'sugg-btn'; btn.type = 'button'; btn.textContent = s; btn.addEventListener('click', () => useSugg(s)); grid.appendChild(btn); }); }
+    function useSugg(t) { switchTab('chat'); const inp = q('chat-input'); inp.value = t; inp.focus(); if (serverOnline) sendMsg(); }
     function chatKey(e) { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); sendMsg(); } }
     async function checkServer() { const dot = q('chat-dot'), txt = q('chat-status'), btn = q('btn-send'); dot.className = 'sdot checking'; txt.textContent = 'Checking…'; try { const r = await fetch(CHAT_URL + '/ping', { signal: AbortSignal.timeout(3000) }); const d = await r.json(); if (d.status === 'ok') { dot.className = 'sdot online'; txt.textContent = 'AI Chat — Online ✓'; txt.style.color = 'var(--accent)'; btn.disabled = false; serverOnline = true; } } catch (e) { dot.className = 'sdot offline'; txt.textContent = 'Server offline — run chatbot_server.py'; txt.style.color = 'var(--red)'; btn.disabled = true; serverOnline = false; } }
-    function dataSummary() { const out = { meta: D.meta, global: { total_1990: D.global.total_co2[0], total_latest: D.global.total_co2.at(-1), top10: D.global.top10_countries }, countries: {} }; D.countries.forEach(c => { const cd = D.per_country[c]; if (!cd) return; out.countries[c] = { iso: cd.iso, latest_co2: cd.co2.at(-1), forecast_end: cd.rf_forecast.at(-1), pct_change: cd.insight?.pct_change, risk: cd.insight?.risk, rf_r2: cd.rf_r2, top_driver: cd.insight?.top_factor }; }); return JSON.stringify(out); }
-    function systemPrompt() { return `You are an expert climate data analyst for a Carbon Emission Dashboard.\nYou have CO₂ data for ${D.meta.n_countries} countries (${D.meta.year_start}–${D.meta.year_end}) with ${D.meta.forecast_years}-year ML forecasts.\n\nDATA:\n${dataSummary()}\n\nRules: Use exact numbers from data. Be concise. Use **bold** for key names/numbers. Use bullet lists for comparisons. State if a country is not in the dataset.`; }
+    function dataSummary() { const out = { meta: D.meta, global: { total_1990: D.global.total_co2[0], total_latest: D.global.total_co2.at(-1), top10: D.global.top10_countries }, countries: {} }; D.countries.forEach(c => { const cd = D.per_country[c]; if (!cd) return; out.countries[c] = { iso: cd.iso, latest_co2: cd.co2.at(-1), estimated_aqi: aqiForCountry(c).score, aqi_category: aqiForCountry(c).category, forecast_end: cd.rf_forecast.at(-1), pct_change: cd.insight?.pct_change, risk: cd.insight?.risk, rf_r2: cd.rf_r2, top_driver: cd.insight?.top_factor }; }); return JSON.stringify(out); }
+    function systemPrompt() { return `You are an expert climate data analyst for a Carbon Emission Dashboard.\nYou have CO₂ data for ${D.meta.n_countries} countries (${D.meta.year_start}–${D.meta.year_end}) with ${D.meta.forecast_years}-year ML forecasts and an estimated AQI-style index derived from CO₂, CO₂ per capita, energy per capita, and forecast growth.\n\nDATA:\n${dataSummary()}\n\nRules: Use exact numbers from data. Be concise. Use **bold** for key names/numbers. Use bullet lists for comparisons. State clearly that AQI values are estimated dashboard signals, not live pollutant readings.`; }
     function addBubble(role, html) { const msgs = q('chat-messages'); const div = document.createElement('div'); div.className = `bubble ${role}`; const lbl = role === 'user' ? 'You' : role === 'ai' ? 'Carbon AI' : ''; if (lbl) div.innerHTML = `<div class="bubble-lbl">${lbl}</div>`; if (role === 'ai') div.innerHTML += md(html); else if (role === 'user') div.innerHTML += esc(html); else div.innerHTML += html; msgs.insertBefore(div, q('typing')); msgs.scrollTop = msgs.scrollHeight; }
     function showTyping() { q('typing').style.display = 'block'; q('chat-messages').scrollTop = q('chat-messages').scrollHeight; }
     function hideTyping() { q('typing').style.display = 'none'; }
