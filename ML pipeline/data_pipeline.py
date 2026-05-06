@@ -142,6 +142,21 @@ def generate_synthetic_data() -> pd.DataFrame:
 
         co2_series = _growth_curve(co2_start, co2_end, N_YEARS, shape, seed_offset=idx)
 
+        # ── Realistic emission shocks (so anomaly detection has real events) ────
+        # Global shocks: GFC 2009 (idx 19), COVID 2020 (idx 30)
+        co2_series[19] *= rng.uniform(0.90, 0.96)   # GFC: -4 to -10 %
+        co2_series[30] *= rng.uniform(0.85, 0.94)   # COVID: -6 to -15 %
+
+        # Country-specific shock: one sharp spike OR drop for ~1 in 3 countries
+        if idx % 3 == 0:
+            shock_yr = int(rng.integers(5, N_YEARS - 5))   # somewhere mid-series
+            if idx % 6 == 0:
+                co2_series[shock_yr] *= rng.uniform(1.35, 1.55)   # spike +35–55 %
+            else:
+                co2_series[shock_yr] *= rng.uniform(0.45, 0.65)   # drop  -35–55 %
+        co2_series = np.clip(co2_series, 0, None)
+        # ────────────────────────────────────────────────────────────────────────
+
         # Energy per capita: loosely tracks CO2
         energy_ratio = energy_pc / max(co2_end, 1)
         energy_series = co2_series * energy_ratio * (
@@ -287,6 +302,87 @@ def build_forecast_X(df_clean: pd.DataFrame, scaler: StandardScaler,
     future_df = pd.DataFrame(future_rows)[feature_cols]
     X_future  = scaler.transform(future_df.values)
     return X_future, future_years
+
+
+def detect_anomalies(df_clean: pd.DataFrame) -> dict:
+    """
+    Task 2 — Anomaly Detection on a single country's cleaned CO2 series.
+
+    Rolling Z-score
+    ───────────────
+    • Window  : 5 years (trailing), min_periods=3 to handle series edges
+    • Z-score : (value − rolling_mean) / rolling_std
+    • Anomaly : abs(Z) > 2.5
+      - "spike" if Z >  2.5
+      - "drop"  if Z < -2.5
+
+    Trend reversal
+    ──────────────
+    • Compute a 3-year trailing slope at each point:
+          slope[i] = co2[i] - co2[i-2]   (rise over a 2-year run)
+    • trend_reversal = True if any consecutive pair of slopes have
+      opposite signs AND the magnitude of both is > 1 % of the series
+      mean (to suppress noise on near-flat series).
+
+    Returns
+    -------
+    dict with keys:
+        anomaly_years  : list of { year, value, type, z_score }
+        trend_reversal : bool
+    """
+    df = df_clean.sort_values("year").copy().reset_index(drop=True)
+    co2    = pd.Series(df["co2"].values, dtype=float)
+    years  = df["year"].tolist()
+    n      = len(co2)
+
+    # ── Detrended global Z-score ───────────────────────────────────────────────
+    # Step 1: Remove a linear trend so anomalies stand out against monotone series
+    t         = np.arange(n, dtype=float)
+    coeffs    = np.polyfit(t, co2.values, 1)
+    trend     = np.polyval(coeffs, t)
+    residuals = co2.values - trend           # deviations from the long-run trend
+
+    # Step 2: Standardise using the GLOBAL mean/std of residuals.
+    #         (Rolling windows include the shocked year in their local stats,
+    #          artificially suppressing the Z-score of genuine anomalies.)
+    res_mean   = float(np.mean(residuals))
+    res_std    = float(np.std(residuals, ddof=1)) or 1.0
+    z_global   = (residuals - res_mean) / res_std
+
+    anomaly_years = []
+    for i in range(n):
+        z = float(z_global[i])
+        if np.isnan(z):
+            continue
+        if abs(z) > 2.5:
+            atype = "spike" if z > 2.5 else "drop"
+            anomaly_years.append({
+                "year":    int(years[i]),
+                "value":   round(float(co2.iloc[i]), 2),
+                "type":    atype,
+                "z_score": round(z, 3),
+            })
+
+    # ── Trend reversal: 3-year slope sign change ───────────────────────────────
+    trend_reversal = False
+    if n >= 6:
+        co2_arr   = co2.values
+        mean_co2  = float(np.mean(co2_arr))
+        noise_thr = abs(mean_co2) * 0.01   # slope must exceed 1 % of series mean
+
+        slopes = [co2_arr[i] - co2_arr[i - 2] for i in range(2, n)]
+
+        for i in range(len(slopes) - 1):
+            s_curr, s_next = slopes[i], slopes[i + 1]
+            if abs(s_curr) > noise_thr and abs(s_next) > noise_thr:
+                if s_curr * s_next < 0:
+                    trend_reversal = True
+                    break
+
+    return {
+        "anomaly_years":  anomaly_years,
+        "trend_reversal": trend_reversal,
+    }
 
 
 FEATURE_COLS = ["year", "energy_per_capita", "gdp_per_capita", "population"]

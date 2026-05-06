@@ -1530,6 +1530,9 @@
       <button class="tab-btn" onclick="switchTab('global')">🌐 Global</button>
       <button class="tab-btn" onclick="switchTab('aqi')">🌫️ AQI Index</button>
       <button class="tab-btn" onclick="switchTab('chat')">🤖 AI Chat</button>
+      <button class="tab-btn" onclick="switchTab('anomalies')">⚠️ Anomalies</button>
+      <button class="tab-btn" onclick="switchTab('scenario')">🎛️ Scenario</button>
+      <button class="tab-btn" onclick="switchTab('export')">📤 Export & Share</button>
     </div>
 
     <!-- ════ TAB: MAP ════ -->
@@ -1909,6 +1912,123 @@
         </div>
       </div>
     </div>
+
+    <!-- ════ TAB: ANOMALIES ════ -->
+    <div class="tab-panel" id="tab-anomalies">
+      <div class="pg-header">
+        <div>
+          <h2 style="color:var(--texthi)">Anomaly <span>Detection</span></h2>
+          <div style="font-size:12px;color:var(--textdim);margin-top:3px;font-family:var(--mono)">Historical Spikes & Drops (|Z| > 2.5)</div>
+        </div>
+      </div>
+      <div class="grid-2">
+        <div class="card" style="margin-bottom:0">
+          <div class="card-title">Countries with Anomalies</div>
+          <div id="chart-anomalies-map" style="height:min(380px,60vw)"></div>
+        </div>
+        <div class="card" style="margin-bottom:0">
+          <div class="card-title" id="anomalies-country-title">Select a country on the map</div>
+          <div id="chart-anomalies-timeline" style="height:min(380px,60vw)"></div>
+        </div>
+      </div>
+      <div class="card" style="margin-top:14px">
+        <div class="card-title">Detected Anomalies</div>
+        <div style="overflow-x:auto">
+          <table style="width:100%;border-collapse:collapse;font-size:12px;text-align:left">
+            <thead>
+              <tr style="font-family:var(--mono);font-size:10px;color:var(--textdim);border-bottom:1px solid var(--border)">
+                <th style="padding:8px">Country</th>
+                <th style="padding:8px">Year</th>
+                <th style="padding:8px">Type</th>
+                <th style="padding:8px">Value (MT)</th>
+                <th style="padding:8px">Z-Score</th>
+              </tr>
+            </thead>
+            <tbody id="anomalies-table-body"></tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
+    <!-- ════ TAB: SCENARIO SIMULATOR ════ -->
+    <div class="tab-panel" id="tab-scenario">
+      <div class="pg-header">
+        <div>
+          <h2 style="color:var(--texthi)">Scenario <span>Simulator</span></h2>
+          <div style="font-size:12px;color:var(--textdim);margin-top:3px;font-family:var(--mono)">Adjust policy and growth to simulate emissions</div>
+        </div>
+      </div>
+      <div class="grid-2">
+        <div class="card">
+          <div class="card-title">Simulation Parameters</div>
+          <div style="margin-bottom:16px">
+            <label style="font-family:var(--mono);font-size:10px;color:var(--textdim);display:block;margin-bottom:6px">SELECT COUNTRY</label>
+            <select id="scenario-country" style="width:100%;padding:10px;background:var(--s2);color:var(--texthi);border:1px solid var(--border2);border-radius:6px;outline:none;font-family:var(--sans)"></select>
+          </div>
+          <div class="mixer-row">
+            <span>GDP Growth</span>
+            <input type="range" id="sim-gdp" min="0" max="10" step="0.5" value="3" oninput="q('sim-gdp-v').textContent = Number(this.value).toFixed(1) + '%'" />
+            <strong id="sim-gdp-v">3.0%</strong>
+          </div>
+          <div class="mixer-row">
+            <span>Policy Reduction</span>
+            <input type="range" id="sim-policy" min="0" max="50" step="1" value="20" oninput="q('sim-policy-v').textContent = this.value + '%'" />
+            <strong id="sim-policy-v">20%</strong>
+          </div>
+          <div class="mixer-row">
+            <span>Energy Mix Shift</span>
+            <input type="range" id="sim-energy" min="0" max="30" step="1" value="10" oninput="q('sim-energy-v').textContent = this.value + '%'" />
+            <strong id="sim-energy-v">10%</strong>
+          </div>
+          <button class="btn-sm" style="margin-top:20px;width:100%;padding:12px;background:var(--accent);color:var(--bg);font-weight:600;border:none;border-radius:6px;cursor:pointer" onclick="runSimulation()">Run Simulation</button>
+        </div>
+        <div class="card">
+          <div class="card-title">Projected Impact</div>
+          <div style="margin-bottom:14px">
+            <div style="font-family:var(--mono);font-size:10px;letter-spacing:0.1em;color:var(--textdim);text-transform:uppercase">Projected Savings (5 Yrs)</div>
+            <div style="font-family:var(--mono);font-size:32px;color:var(--accent);font-weight:700" id="sim-savings">—</div>
+          </div>
+          <div id="chart-scenario" style="height:min(260px,50vw)"></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ════ TAB: EXPORT & SHARE ════ -->
+    <div class="tab-panel" id="tab-export">
+      <div class="pg-header">
+        <div>
+          <h2 style="color:var(--texthi)">Export & <span>Share</span></h2>
+          <div style="font-size:12px;color:var(--textdim);margin-top:3px;font-family:var(--mono)">Download dataset and share the dashboard</div>
+        </div>
+      </div>
+      <div class="grid-2">
+        <div class="card">
+          <div class="card-title">Download Data (CSV)</div>
+          <div style="margin-bottom:20px;padding:16px;background:var(--s2);border-radius:6px;border:1px solid var(--border2)">
+            <strong style="color:var(--texthi);display:block;margin-bottom:8px">Global Data</strong>
+            <p style="font-size:12px;color:var(--textdim);margin-bottom:12px">Download the total global CO₂ emissions history.</p>
+            <button class="btn-sm" style="width:100%;padding:10px;cursor:pointer" onclick="exportGlobalData()">Download Global CSV</button>
+          </div>
+          <div style="padding:16px;background:var(--s2);border-radius:6px;border:1px solid var(--border2)">
+            <strong style="color:var(--texthi);display:block;margin-bottom:8px">Country Data</strong>
+            <p style="font-size:12px;color:var(--textdim);margin-bottom:12px">Download historical and forecast data for the currently selected country.</p>
+            <button class="btn-sm" style="width:100%;padding:10px;cursor:pointer" onclick="exportCountryData()">Download <span id="export-country-lbl">Country</span> CSV</button>
+          </div>
+        </div>
+        <div class="card">
+          <div class="card-title">Share Dashboard</div>
+          <div style="padding:16px;background:var(--s2);border-radius:6px;border:1px solid var(--border2)">
+            <strong style="color:var(--texthi);display:block;margin-bottom:8px">Dashboard Link</strong>
+            <p style="font-size:12px;color:var(--textdim);margin-bottom:12px">Share this link to let others view the interactive dashboard.</p>
+            <div style="display:flex;gap:8px">
+              <input type="text" id="share-link-input" readonly style="flex:1;padding:10px;background:var(--bg);color:var(--textdim);border:1px solid var(--border);border-radius:4px;font-family:var(--mono);font-size:12px" value="http://localhost:5000">
+              <button class="btn-sm" style="white-space:nowrap;cursor:pointer" onclick="copyShareLink()">Copy Link</button>
+            </div>
+            <div id="share-toast" style="font-size:12px;color:var(--accent);margin-top:8px;display:none;font-family:var(--mono)">✓ Link copied to clipboard!</div>
+          </div>
+        </div>
+      </div>
+    </div>
   </main>
 
   <script>
@@ -1930,7 +2050,7 @@
     function closeSidebar() { q('sidebar').classList.remove('mobile-open'); q('sidebar-overlay').classList.remove('open'); }
 
     // ── TABS ──────────────────────────────────────────────────────────
-    const TABS = ['map', 'country', 'compare', 'global', 'aqi', 'chat'];
+    const TABS = ['map', 'country', 'compare', 'global', 'aqi', 'chat', 'anomalies', 'scenario', 'export'];
     function switchTab(name) {
       document.querySelectorAll('.tab-btn').forEach((b, i) => b.classList.toggle('active', TABS[i] === name));
       document.querySelectorAll('.tab-panel').forEach(p => p.classList.toggle('active', p.id === 'tab-' + name));
@@ -1940,6 +2060,9 @@
       if (name === 'compare') renderCompare();
       if (name === 'map') renderMap();
       if (name === 'chat') checkServer();
+      if (name === 'anomalies') renderAnomalies();
+      if (name === 'scenario') initScenario();
+      if (name === 'export') { q('export-country-lbl').textContent = activeCountry || 'Country'; q('share-link-input').value = window.location.href; }
       closeSidebar();
     }
 
@@ -1970,9 +2093,14 @@
     function selectCountry(c) { activeCountry = c; syncSidebar(); switchTab('country'); renderCountry(); }
     function setModel(m) { activeModel = m; q('btn-rf').classList.toggle('active', m === 'rf'); q('btn-lr').classList.toggle('active', m === 'lr'); if (activeCountry) renderCountry(); }
 
-    function renderCountry() {
+    async function renderCountry() {
       const cd = D.per_country[activeCountry]; if (!cd) { q('country-no-data').style.display = ''; q('country-detail').style.display = 'none'; return; }
       q('country-no-data').style.display = 'none'; q('country-detail').style.display = 'block';
+      let apiData = null;
+      try {
+        const r = await fetch('/api/predict/' + encodeURIComponent(activeCountry));
+        apiData = await r.json();
+      } catch(e) { console.error('API error', e); }
       const ins = cd.insight, fc = activeModel === 'rf' ? cd.rf_forecast : cd.lr_forecast, r2 = activeModel === 'rf' ? cd.rf_r2 : cd.lr_r2, pct = ins.pct_change;
       q('country-title').textContent = activeCountry;
       q('country-subtitle').textContent = `ISO: ${cd.iso || '—'} · ${cd.years[0]}–${cd.years.at(-1)}`;
@@ -1982,17 +2110,23 @@
       q('ckpi-risk').textContent = ins.risk; q('ckpi-risk').style.color = ins.risk_color; q('ckpi-r2').textContent = r2.toFixed(3);
       q('ins-head').innerHTML = ins.headline; q('ins-detail').innerHTML = ins.detail; q('ins-rec').innerHTML = ins.recommendation;
       const ch = q('risk-chip'); ch.textContent = ins.risk.toUpperCase(); ch.style.cssText = `background:${ins.risk_color}18;border:1px solid ${ins.risk_color};color:${ins.risk_color}`;
-      renderCTrend(cd); renderCGauge(cd); renderCFI(cd); renderCScatter(cd); renderCTable(cd);
+      renderCTrend(cd, apiData); renderCGauge(cd); renderCFI(cd); renderCScatter(cd); renderCTable(cd);
     }
 
-    function renderCTrend(cd) {
+    function renderCTrend(cd, apiData) {
       const fc = activeModel === 'rf' ? cd.rf_forecast : cd.lr_forecast, fcCol = activeModel === 'rf' ? C.accent : C.amber, tp = activeModel === 'rf' ? cd.rf_test : cd.lr_test;
       const noise = Math.max(...cd.co2) * 0.06;
       const tr = [{ x: cd.years, y: cd.co2, name: 'Actual', mode: 'lines', line: { color: C.texthi, width: 2 }, hovertemplate: '%{x}: <b>%{y:.1f} MT</b><extra>Actual</extra>' }];
       if (cd.test_years?.length && tp?.length) tr.push({ x: cd.test_years, y: tp, name: 'Test fit', mode: 'lines', line: { color: fcCol, width: 1.4, dash: 'dot' } });
-      if (activeModel === 'rf') tr.push({ x: [...cd.forecast_years, ...cd.forecast_years.slice().reverse()], y: [...fc.map(v => v + noise), ...fc.map(v => v - noise).reverse()], fill: 'toself', fillcolor: 'rgba(0,229,176,.07)', line: { color: 'transparent' }, hoverinfo: 'skip', showlegend: false });
+      if (activeModel === 'rf') {
+        if (apiData && apiData.upper_band) {
+          tr.push({ x: [...apiData.forecast_years, ...apiData.forecast_years.slice().reverse()], y: [...apiData.upper_band, ...apiData.lower_band.slice().reverse()], fill: 'toself', fillcolor: 'rgba(0,229,176,.15)', line: { color: 'transparent' }, name: '95% Confidence Band', hoverinfo: 'skip' });
+        } else {
+          tr.push({ x: [...cd.forecast_years, ...cd.forecast_years.slice().reverse()], y: [...fc.map(v => v + noise), ...fc.map(v => v - noise).reverse()], fill: 'toself', fillcolor: 'rgba(0,229,176,.07)', line: { color: 'transparent' }, hoverinfo: 'skip', showlegend: false });
+        }
+      }
       tr.push({ x: cd.forecast_years, y: fc, name: activeModel === 'rf' ? 'RF Forecast' : 'LR Forecast', mode: 'lines+markers', line: { color: fcCol, width: 2.2 }, marker: { size: 6, color: fcCol }, hovertemplate: '%{x}: <b>%{y:.1f} MT</b><extra>Forecast</extra>' });
-      Plotly.react('chart-country-trend', tr, { ...BL, yaxis: { ...BL.yaxis, title: 'MT CO₂' }, legend: { bgcolor: 'rgba(0,0,0,0)', font: { size: 9 } }, hovermode: 'x unified', shapes: [{ type: 'line', x0: cd.forecast_years[0], x1: cd.forecast_years[0], y0: 0, y1: 1, yref: 'paper', line: { color: C.red, width: 1, dash: 'dot' } }], annotations: [{ x: cd.forecast_years[0], y: 1, yref: 'paper', xanchor: 'left', showarrow: false, text: ' Forecast →', font: { color: C.red, size: 9, family: C.font } }] }, cfg);
+      Plotly.react('chart-country-trend', tr, { ...BL, yaxis: { ...BL.yaxis, title: 'MT CO₂' }, legend: { bgcolor: 'rgba(0,0,0,0)', font: { size: 9 }, orientation: 'h', x: 0, y: 1.1 }, hovermode: 'x unified', shapes: [{ type: 'line', x0: cd.forecast_years[0], x1: cd.forecast_years[0], y0: 0, y1: 1, yref: 'paper', line: { color: C.red, width: 1, dash: 'dot' } }], annotations: [{ x: cd.forecast_years[0], y: 1, yref: 'paper', xanchor: 'left', showarrow: false, text: ' Forecast →', font: { color: C.red, size: 9, family: C.font } }] }, cfg);
     }
     function renderCGauge(cd) {
       const val = cd.co2.at(-1) || 0, maxV = Math.max(...cd.co2) * 1.2, p = val / maxV, col = p > .75 ? C.red : p > .5 ? C.amber : C.accent;
@@ -2110,6 +2244,139 @@
     function esc(t) { return t.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;'); }
     function md(t) { return esc(t).replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>').replace(/\*(.+?)\*/g, '<em>$1</em>').replace(/`(.+?)`/g, '<code style="font-family:var(--mono);font-size:11px;background:var(--s3);padding:1px 5px;border-radius:3px">$1</code>').replace(/^- (.+)$/gm, '<li>$1</li>').replace(/(<li>[\s\S]*?<\/li>)+/g, '<ul style="margin:6px 0 6px 16px">$&</ul>').replace(/\n\n/g, '<br/><br/>').replace(/\n/g, '<br/>'); }
     async function sendMsg() { if (busy) return; const inp = q('chat-input'), msg = inp.value.trim(); if (!msg) return; if (!serverOnline) { addBubble('err', '⚠️ Server offline. Run <code>python chatbot_server.py</code> then open <code>http://localhost:5500</code>'); return; } busy = true; q('btn-send').disabled = true; addBubble('user', msg); inp.value = ''; showTyping(); const messages = [...chatHistory, { role: 'user', content: msg }]; try { const r = await fetch(CHAT_URL + '/chat', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ model: 'gemini-2.0-flash', max_tokens: 1024, system: systemPrompt(), messages }) }); const data = await r.json(); if (data.error) throw new Error(data.error); const reply = data.content?.find(b => b.type === 'text')?.text || 'No response.'; chatHistory.push({ role: 'user', content: msg }, { role: 'assistant', content: reply }); if (chatHistory.length > 20) chatHistory = chatHistory.slice(-20); hideTyping(); addBubble('ai', reply); } catch (e) { hideTyping(); addBubble('err', `❌ ${esc(e.message)}`); } finally { busy = false; q('btn-send').disabled = false; inp.focus(); } }
+
+    // ── ANOMALIES ─────────────────────────────────────────────────────
+    let anomaliesData = null;
+    async function renderAnomalies() {
+      if (!anomaliesData) {
+        try {
+          const r = await fetch('/api/anomalies');
+          anomaliesData = await r.json();
+        } catch(e) {
+          console.error(e);
+          return;
+        }
+      }
+      if(!anomaliesData.anomalies) return;
+      const anoms = anomaliesData.anomalies;
+      
+      // Map
+      const isos = anoms.map(a => a.iso);
+      const names = anoms.map(a => a.country);
+      const vals = anoms.map(a => a.anomaly_years.length);
+      Plotly.react('chart-anomalies-map', [{ type: 'scattergeo', locationmode: 'ISO-3', locations: isos, text: names, hovertemplate: '<b>%{text}</b><br>Anomalies: %{marker.size}<extra></extra>', mode: 'markers', marker: { size: vals, sizemode: 'area', sizeref: 0.1, color: C.red, line: { color: C.bg, width: 1 } } }], { ...BL, margin: { l: 0, r: 0, t: 4, b: 4 }, geo: { showframe: false, showcoastlines: true, coastlinecolor: C.grid, bgcolor: C.bg, landcolor: '#111c2b', oceancolor: '#060b14', showocean: true, projection: { type: 'natural earth' }, lataxis: { range: [-75, 85] } } }, cfg);
+      
+      q('chart-anomalies-map').on('plotly_click', d => {
+        if(d.points && d.points[0]) renderAnomaliesTimeline(d.points[0].text);
+      });
+
+      // Table
+      const tb = q('anomalies-table-body'); tb.innerHTML = '';
+      anoms.forEach(a => {
+        a.anomaly_years.forEach(ay => {
+          const c = ay.type === 'spike' ? C.red : C.accent;
+          tb.innerHTML += `<tr onclick="renderAnomaliesTimeline('${a.country.replace(/'/g, "\\'")}')" style="cursor:pointer;border-bottom:1px solid var(--border)"><td style="padding:8px;color:var(--texthi)">${a.country}</td><td style="padding:8px;color:var(--textdim);font-family:var(--mono)">${ay.year}</td><td style="padding:8px;color:${c}">${ay.type.toUpperCase()}</td><td style="padding:8px;font-family:var(--mono)">${fn(ay.value, 1)}</td><td style="padding:8px;font-family:var(--mono);color:${c}">${fn(ay.z_score, 2)}</td></tr>`;
+        });
+      });
+      
+      if(anoms.length) renderAnomaliesTimeline(anoms[0].country);
+    }
+    
+    function renderAnomaliesTimeline(country) {
+      q('anomalies-country-title').textContent = `${country} - Anomalies`;
+      const cd = D.per_country[country];
+      const anom = anomaliesData.anomalies.find(a => a.country === country);
+      if(!cd || !anom) return;
+      
+      const spikes = anom.anomaly_years.filter(a => a.type === 'spike');
+      const drops = anom.anomaly_years.filter(a => a.type === 'drop');
+      
+      const tr = [{ x: cd.years, y: cd.co2, name: 'CO₂', mode: 'lines', line: { color: C.texthi, width: 2 } }];
+      if(spikes.length) tr.push({ x: spikes.map(s => s.year), y: spikes.map(s => s.value), name: 'Spike', mode: 'markers', marker: { color: C.red, size: 10, symbol: 'triangle-up' } });
+      if(drops.length) tr.push({ x: drops.map(s => s.year), y: drops.map(s => s.value), name: 'Drop', mode: 'markers', marker: { color: C.blue, size: 10, symbol: 'triangle-down' } });
+      
+      Plotly.react('chart-anomalies-timeline', tr, { ...BL, yaxis: { ...BL.yaxis, title: 'MT CO₂' }, hovermode: 'x unified', legend: { bgcolor: 'rgba(0,0,0,0)', font: { size: 9 }, orientation: 'h', x: 0, y: 1.1 } }, cfg);
+    }
+
+    // ── SCENARIO SIMULATOR ────────────────────────────────────────────
+    let scenarioInit = false;
+    function initScenario() {
+      if (scenarioInit) return;
+      scenarioInit = true;
+      const sel = q('scenario-country');
+      sel.innerHTML = D.countries.map(c => `<option value="${c}">${c}</option>`).join('');
+      if(activeCountry) sel.value = activeCountry;
+    }
+    
+    async function runSimulation() {
+      const country = q('scenario-country').value;
+      const body = {
+        country: country,
+        gdp_growth: parseFloat(q('sim-gdp').value),
+        policy_reduction: parseFloat(q('sim-policy').value),
+        energy_mix_shift: parseFloat(q('sim-energy').value)
+      };
+      
+      try {
+        const r = await fetch('/api/scenario', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) });
+        const data = await r.json();
+        if(data.error) throw new Error(data.error);
+        
+        q('sim-savings').textContent = `${data.projected_savings > 0 ? '-' : '+'}${Math.abs(data.projected_savings)} MT CO₂`;
+        q('sim-savings').style.color = data.projected_savings > 0 ? C.accent : C.red;
+        
+        const cd = D.per_country[country];
+        const tr = [
+          { x: cd.years, y: cd.co2, name: 'Actual', mode: 'lines', line: { color: C.textdim, width: 2 } },
+          { x: data.forecast_years, y: data.baseline_forecast, name: 'Baseline', mode: 'lines', line: { color: C.blue, width: 2, dash: 'dash' } },
+          { x: data.forecast_years, y: data.scenario_forecast, name: 'Scenario', mode: 'lines+markers', line: { color: C.amber, width: 2 }, marker: { color: C.amber, size: 6 } }
+        ];
+        Plotly.react('chart-scenario', tr, { ...BL, yaxis: { ...BL.yaxis, title: 'MT CO₂' }, hovermode: 'x unified', legend: { bgcolor: 'rgba(0,0,0,0)', font: { size: 9 }, orientation: 'h', x: 0, y: 1.1 } }, cfg);
+      } catch(e) {
+        alert(e.message);
+      }
+    }
+
+    // ── EXPORT & SHARE ────────────────────────────────────────────────
+    function downloadCSV(filename, content) {
+      const blob = new Blob([content], { type: 'text/csv;charset=utf-8;' });
+      const link = document.createElement('a');
+      const url = URL.createObjectURL(blob);
+      link.setAttribute('href', url);
+      link.setAttribute('download', filename);
+      link.style.visibility = 'hidden';
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+    }
+    
+    function exportGlobalData() {
+      let csv = 'Year,Global_Total_CO2_MT\n';
+      D.global.years.forEach((yr, i) => { csv += `${yr},${D.global.total_co2[i]}\n`; });
+      downloadCSV('global_carbon_emissions.csv', csv);
+    }
+    
+    function exportCountryData() {
+      if (!activeCountry) return alert('Please select a country first.');
+      const cd = D.per_country[activeCountry];
+      if (!cd) return alert('No data for selected country.');
+      
+      let csv = 'Year,Actual_CO2_MT,RF_Forecast_MT,LR_Forecast_MT\n';
+      // Actuals
+      cd.years.forEach((yr, i) => { csv += `${yr},${cd.co2[i]},,\n`; });
+      // Forecasts
+      cd.forecast_years.forEach((yr, i) => { csv += `${yr},,${cd.rf_forecast[i]},${cd.lr_forecast[i]}\n`; });
+      downloadCSV(`${activeCountry.replace(/\\s+/g, '_')}_emissions.csv`, csv);
+    }
+    
+    function copyShareLink() {
+      const input = q('share-link-input');
+      input.select(); input.setSelectionRange(0, 99999);
+      navigator.clipboard.writeText(input.value).then(() => {
+        q('share-toast').style.display = 'block';
+        setTimeout(() => q('share-toast').style.display = 'none', 3000);
+      });
+    }
 
     // ── INIT ──────────────────────────────────────────────────────────
     function init() {

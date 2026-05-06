@@ -26,20 +26,26 @@ This is a **Final Year BCA Project** at Tilak Maharashtra Vidyapeeth University.
 
 ## ✨ Features
 
-### 5-Tab Interactive Dashboard
+### 8-Tab Interactive Dashboard
 | Tab | Description |
 |---|---|
 | 🗺️ **World Map** | Choropleth map with year slider and total/per-capita toggle |
-| 📊 **Country Detail** | Forecast chart, emission gauge, feature importance, ML metrics |
+| 📊 **Country Detail** | Forecast chart with 95% confidence bands, emission gauge, ML metrics |
 | 🆚 **Compare** | Compare up to 4 countries side-by-side with 5 charts |
 | 🌐 **Global Trends** | World total CO₂, top 10 pie chart, annual trend lines |
 | 🤖 **AI Chat** | Live chatbot that answers data questions using your actual numbers |
 | 🔍 **Data Explorer** | Interactive filters, range sliders, export to CSV/PNG |
 | 📤 **Export/Share** | Export current view data, share via link |
 | 🌫️ **AQI Metric** | Air Quality Index overlay on map |
+| ⚠️ **Anomalies** | Global detrended Z-score detection for historical emission spikes and drops |
+| 🎛️ **Scenario** | Interactive simulator for GDP growth, policy reduction, and energy mix impact |
+
+### Enhancements
+| Feature | Description |
+|---|---|
 | 🔐 **Improved Login** | Fixed login redirection bug, persistent session |
 | ⚙️ **Config Persistence** | API key stored in config file, no manual input |
-| 🤖 **AI Model Update** | Updated to Anthropic Claude 1.5‑flash for reliability |
+| 🤖 **AI Model Update** | Updated to Anthropic Claude 1.5-flash for reliability |
 
 ### Machine Learning
 - Random Forest Regressor (trend-residual approach for time series)
@@ -51,7 +57,9 @@ This is a **Final Year BCA Project** at Tilak Maharashtra Vidyapeeth University.
 ### Full-Stack Backend
 - Admin login with Flask-Login and session management
 - MySQL database with 7 normalized tables
-- REST API endpoints for all dashboard data
+- REST API endpoints for all dashboard data and live ML predictions
+- **APScheduler integration for 24-hour automated background data refresh**
+- Intelligent file-system caching mechanism for dashboard JSON
 - CSV upload to load real OWID dataset (200+ countries)
 - Live model retraining from admin panel
 - Audit logs for all uploads
@@ -246,6 +254,10 @@ generate_data.py
 | GET | `/admin` | ✅ Admin | Admin panel |
 | GET | `/api/data` | ✅ Login | Full dashboard JSON |
 | GET | `/api/countries` | ✅ Login | List all countries |
+| GET | `/api/predict/<country>` | ✅ Login | Country forecast + 95% confidence bands |
+| GET | `/api/anomalies` | ✅ Login | Detected global emission anomalies |
+| GET | `/api/risk/<country>` | ✅ Login | Emission risk score and classification |
+| POST | `/api/scenario` | ✅ Login | Run policy simulation scenarios |
 | POST | `/admin/upload` | ✅ Admin | Upload CSV dataset |
 | POST | `/admin/retrain` | ✅ Admin | Retrain all ML models |
 
@@ -268,6 +280,7 @@ Flask-Login>=0.6.3
 Flask-CORS>=4.0.0
 PyMySQL>=1.1.0
 Werkzeug>=3.0.0
+APScheduler>=3.10.0
 ```
 
 **Frontend** (loaded from CDN — nothing to install)

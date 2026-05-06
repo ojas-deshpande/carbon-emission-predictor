@@ -15,10 +15,10 @@ import numpy as np
 import pandas as pd
 
 from data_pipeline import (
-    load_data, preprocess_country, build_forecast_X,
+    load_data, preprocess_country, build_forecast_X, detect_anomalies,
     FEATURE_COLS, YEAR_START, YEAR_END,
 )
-from ml_models import train_country, forecast_country
+from ml_models import train_country, forecast_country, fit_arima, ensemble_forecast
 from insights import generate_country_insights
 
 FORECAST_YEARS = 5   # how many years ahead to forecast
@@ -134,10 +134,23 @@ def build_dashboard_data() -> dict:
         X_future, future_years = build_forecast_X(df_clean, scaler, FEATURE_COLS, FORECAST_YEARS)
         rf_fc, lr_fc = forecast_country(result, X_future)
 
+        # ── Task 1: ARIMA + Ensemble ───────────────────────────────────────────
+        arima_res = fit_arima(df_clean["co2"].values)
+        ens = ensemble_forecast(
+            rf_forecast=rf_fc,
+            arima_result=arima_res,
+            rf_mae=result.rf_mae,
+            rf_r2=result.rf_r2,
+            y_test=y_test if len(y_test) > 0 else None,
+        )
+
+        # ── Task 2: Anomaly Detection ───────────────────────────────────────────
+        anomaly_info = detect_anomalies(df_clean)
+
         insight = generate_country_insights(
             country=country,
             historical_co2=df_clean["co2"].values,
-            rf_forecast=rf_fc,
+            rf_forecast=np.array(ens.forecast),
             feature_importances=result.feature_importances,
             rf_r2=result.rf_r2,
             rf_mae=result.rf_mae,
@@ -165,6 +178,14 @@ def build_dashboard_data() -> dict:
             "forecast_years": future_years,
             "rf_forecast":  series_to_list(rf_fc),
             "lr_forecast":  series_to_list(lr_fc),
+            # ── Task 1 new fields ──────────────────────────────────────────────
+            "forecast":     ens.forecast,
+            "upper_band":   ens.upper_band,
+            "lower_band":   ens.lower_band,
+            "arima_r2":     ens.arima_r2,
+            "ensemble_r2":  ens.ensemble_r2,
+            "used_arima":   ens.used_arima,
+            # ──────────────────────────────────────────────────────────────────
             "rf_r2":        round(result.rf_r2, 4),
             "lr_r2":        round(result.lr_r2, 4),
             "rf_mae":       round(result.rf_mae, 2),
@@ -172,6 +193,9 @@ def build_dashboard_data() -> dict:
             "feature_importances": {k: round(v, 4) for k, v in result.feature_importances.items()},
             "sparse":       sparse,
             "insight":      insight,
+            # ── Task 2 new fields ───────────────────────────────────────────────
+            "anomaly_years":  anomaly_info["anomaly_years"],
+            "trend_reversal": anomaly_info["trend_reversal"],
         }
 
     print(f"  Processed {len(per_country)} countries. Skipped {skipped}.")

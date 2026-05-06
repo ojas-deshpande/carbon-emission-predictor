@@ -25,6 +25,7 @@ import json
 import os
 import sys
 import argparse
+from dotenv import load_dotenv
 import urllib.request
 import urllib.error
 from http.server import HTTPServer, BaseHTTPRequestHandler
@@ -47,6 +48,7 @@ def resolve_api_key() -> str:
     parser.add_argument("--key", default="")
     args, _ = parser.parse_known_args()
 
+    load_dotenv(os.path.join(_SCRIPT_DIR, '..', '.env'))
     key = args.key or os.environ.get("GEMINI_API_KEY", "")
     if not key:
         print("+----------------------------------------------------------+")

@@ -8,6 +8,8 @@ Features:
 • Admin panel for CSV upload and model retraining
 • REST API endpoints for dashboard data
 • MySQL database with SQLAlchemy ORM
+• APScheduler: auto-reruns generate_data.py every 24 hours
+• 4 new Task-3 endpoints: /api/predict, /api/anomalies, /api/risk, /api/scenario
 
 Run: python app.py
 Visit: http://localhost:5000
@@ -20,9 +22,16 @@ from werkzeug.utils import secure_filename
 from datetime import datetime
 import os
 import json
+import subprocess
+import numpy as np
 import pandas as pd
 import webbrowser
 from threading import Timer
+
+# ── APScheduler ────────────────────────────────────────────────────────────────
+from apscheduler.schedulers.background import BackgroundScheduler
+from apscheduler.triggers.interval import IntervalTrigger
+import atexit
 
 from config import Config
 from models import db, User, Country, EmissionData, ModelMetrics, Forecast, Insight, DataUploadLog
@@ -50,6 +59,66 @@ login_manager.login_message = 'Please log in to access this page.'
 @login_manager.user_loader
 def load_user(user_id):
     return User.query.get(int(user_id))
+
+
+# ── Paths ───────────────────────────────────────────────────────────────────────
+_THIS_DIR     = os.path.dirname(os.path.abspath(__file__))
+_ML_DIR       = os.path.join(_THIS_DIR, '..', 'ML pipeline')
+_GENERATE_PY  = os.path.join(_ML_DIR, 'generate_data.py')
+_DASHBOARD_JSON = os.path.join(_ML_DIR, 'dashboard_data.json')
+
+# In-process cache so we don't re-read the file on every request
+_dashboard_cache: dict = {}
+_cache_mtime: float    = 0.0
+
+
+def _load_dashboard_json() -> dict:
+    """
+    Return parsed dashboard_data.json, re-reading from disk only when the
+    file has changed (mtime comparison acts as a lightweight cache).
+    """
+    global _dashboard_cache, _cache_mtime
+    try:
+        mtime = os.path.getmtime(_DASHBOARD_JSON)
+        if mtime != _cache_mtime:
+            with open(_DASHBOARD_JSON, 'r', encoding='utf-8') as f:
+                _dashboard_cache = json.load(f)
+            _cache_mtime = mtime
+    except FileNotFoundError:
+        pass   # file not yet generated; return whatever is in cache
+    return _dashboard_cache
+
+
+# ── APScheduler: auto-regenerate every 24 hours ─────────────────────────────────
+def _scheduled_generate():
+    """
+    Background task: runs generate_data.py as a subprocess so it uses
+    its own Python interpreter / path context.  Errors are logged to stdout.
+    """
+    try:
+        result = subprocess.run(
+            [sys.executable, _GENERATE_PY],
+            capture_output=True, text=True, timeout=600,
+            cwd=_ML_DIR
+        )
+        if result.returncode == 0:
+            print(f'[APScheduler] generate_data.py completed successfully at {datetime.utcnow().isoformat()}Z')
+        else:
+            print(f'[APScheduler] generate_data.py FAILED:\n{result.stderr[:500]}')
+    except Exception as exc:
+        print(f'[APScheduler] Error running generate_data.py: {exc}')
+
+
+_scheduler = BackgroundScheduler(daemon=True)
+_scheduler.add_job(
+    func=_scheduled_generate,
+    trigger=IntervalTrigger(hours=24),
+    id='regenerate_dashboard',
+    name='Regenerate dashboard data every 24 h',
+    replace_existing=True,
+)
+_scheduler.start()
+atexit.register(lambda: _scheduler.shutdown(wait=False))
 
 
 # ── Helper Functions ───────────────────────────────────────────────────────────
@@ -365,6 +434,233 @@ def admin_retrain_models():
     except Exception as e:
         db.session.rollback()
         return jsonify({'error': str(e)}), 500
+
+
+
+# ══════════════════════════════════════════════════════════════════════════════
+# TASK 3 — 4 new API endpoints (all require login)
+# ══════════════════════════════════════════════════════════════════════════════
+
+@app.route('/api/predict/<path:country>')
+@login_required
+def api_predict(country: str):
+    """
+    GET /api/predict/<country>
+    Returns ensemble forecast JSON for the given country.
+    Response:
+        {
+          country, forecast_years, forecast, upper_band, lower_band,
+          rf_forecast, lr_forecast, arima_r2, rf_r2, ensemble_r2, used_arima
+        }
+    """
+    data = _load_dashboard_json()
+    if not data:
+        return jsonify({'error': 'Dashboard data not yet generated. Run generate_data.py first.'}), 503
+
+    per_country = data.get('per_country', {})
+    # Case-insensitive lookup
+    matched = next((k for k in per_country if k.lower() == country.lower()), None)
+    if matched is None:
+        return jsonify({'error': f'Country "{country}" not found. Available: {sorted(per_country.keys())}'}), 404
+
+    c = per_country[matched]
+    return jsonify({
+        'country':       matched,
+        'forecast_years': c.get('forecast_years', []),
+        'forecast':      c.get('forecast', c.get('rf_forecast', [])),
+        'upper_band':    c.get('upper_band', []),
+        'lower_band':    c.get('lower_band', []),
+        'rf_forecast':   c.get('rf_forecast', []),
+        'lr_forecast':   c.get('lr_forecast', []),
+        'arima_r2':      c.get('arima_r2', 0),
+        'rf_r2':         c.get('rf_r2', 0),
+        'ensemble_r2':   c.get('ensemble_r2', c.get('rf_r2', 0)),
+        'used_arima':    c.get('used_arima', False),
+    })
+
+
+@app.route('/api/anomalies')
+@login_required
+def api_anomalies():
+    """
+    GET /api/anomalies
+    Returns all countries that have at least one anomaly year.
+    Response:
+        {
+          total_countries_with_anomalies: int,
+          anomalies: [
+            { country, iso, anomaly_years: [...], trend_reversal }
+          ]
+        }
+    """
+    data = _load_dashboard_json()
+    if not data:
+        return jsonify({'error': 'Dashboard data not yet generated. Run generate_data.py first.'}), 503
+
+    per_country = data.get('per_country', {})
+    result = []
+    for country_name, c in per_country.items():
+        anomaly_years = c.get('anomaly_years', [])
+        if anomaly_years:   # only countries with at least one anomaly
+            result.append({
+                'country':        country_name,
+                'iso':            c.get('iso', ''),
+                'anomaly_years':  anomaly_years,
+                'trend_reversal': c.get('trend_reversal', False),
+            })
+
+    # Sort by number of anomaly events descending
+    result.sort(key=lambda x: len(x['anomaly_years']), reverse=True)
+    return jsonify({
+        'total_countries_with_anomalies': len(result),
+        'anomalies': result,
+    })
+
+
+@app.route('/api/risk/<path:country>')
+@login_required
+def api_risk(country: str):
+    """
+    GET /api/risk/<country>
+    Returns risk_level (Low/Moderate/High/Critical) and risk_score (0-100).
+
+    Risk score formula:
+        score = clamp(abs(pct_change) * 2.5, 0, 100)
+    This maps:
+        0 % change   →  0  (no risk)
+        20% change   → 50  (moderate)
+        40% change   → 100 (critical)
+    """
+    data = _load_dashboard_json()
+    if not data:
+        return jsonify({'error': 'Dashboard data not yet generated. Run generate_data.py first.'}), 503
+
+    per_country = data.get('per_country', {})
+    matched = next((k for k in per_country if k.lower() == country.lower()), None)
+    if matched is None:
+        return jsonify({'error': f'Country "{country}" not found.'}), 404
+
+    c = per_country[matched]
+    insight = c.get('insight', {})
+
+    # Derive pct_change from insight block or recompute from forecast
+    pct_change = insight.get('pct_change', None)
+    if pct_change is None:
+        co2     = c.get('co2', [])
+        forecast = c.get('forecast', c.get('rf_forecast', []))
+        if co2 and forecast:
+            last_hist  = float(co2[-1]) if co2[-1] is not None else 0
+            last_fc    = float(forecast[-1]) if forecast[-1] is not None else 0
+            pct_change = ((last_fc - last_hist) / max(abs(last_hist), 0.01)) * 100
+        else:
+            pct_change = 0.0
+
+    # risk_level buckets (mirrored from insights.py)
+    abs_pct = abs(pct_change)
+    if abs_pct < 3:
+        risk_level = 'Low'
+    elif abs_pct < 10:
+        risk_level = 'Moderate'
+    elif abs_pct < 20:
+        risk_level = 'High'
+    else:
+        risk_level = 'Critical'
+
+    # risk_score: 0–100 linear scale, caps at 40% change
+    risk_score = round(min(abs_pct * 2.5, 100.0), 1)
+
+    return jsonify({
+        'country':    matched,
+        'risk_level': risk_level,
+        'risk_score': risk_score,
+        'pct_change': round(float(pct_change), 2),
+    })
+
+
+@app.route('/api/scenario', methods=['POST'])
+@login_required
+def api_scenario():
+    """
+    POST /api/scenario
+    Body (JSON):
+        {
+          "country":          str,
+          "gdp_growth":       float,   # 0–10 %
+          "policy_reduction": float,   # 0–50 %
+          "energy_mix_shift": float    # 0–30 % (informational only)
+        }
+
+    Formula:
+        adjusted_forecast[i] = base_forecast[i]
+                                × (1 - policy_reduction / 100)
+                                × (1 + gdp_growth / 200)
+
+    Response:
+        {
+          country, forecast_years,
+          baseline_forecast,   # original ensemble forecast
+          scenario_forecast,   # adjusted values
+          projected_savings    # sum(baseline) - sum(scenario), MT CO₂
+        }
+    """
+    body = request.get_json(silent=True) or {}
+    country         = body.get('country', '')
+    gdp_growth      = float(body.get('gdp_growth', 0))
+    policy_reduction = float(body.get('policy_reduction', 0))
+    energy_mix_shift = float(body.get('energy_mix_shift', 0))  # stored but not in formula
+
+    # Validate ranges
+    if not (0 <= gdp_growth <= 10):
+        return jsonify({'error': 'gdp_growth must be 0–10'}), 400
+    if not (0 <= policy_reduction <= 50):
+        return jsonify({'error': 'policy_reduction must be 0–50'}), 400
+    if not (0 <= energy_mix_shift <= 30):
+        return jsonify({'error': 'energy_mix_shift must be 0–30'}), 400
+    if not country:
+        return jsonify({'error': '"country" is required'}), 400
+
+    data = _load_dashboard_json()
+    if not data:
+        return jsonify({'error': 'Dashboard data not yet generated. Run generate_data.py first.'}), 503
+
+    per_country = data.get('per_country', {})
+    matched = next((k for k in per_country if k.lower() == country.lower()), None)
+    if matched is None:
+        return jsonify({'error': f'Country "{country}" not found.'}), 404
+
+    c = per_country[matched]
+    baseline  = c.get('forecast', c.get('rf_forecast', []))
+    fc_years  = c.get('forecast_years', [])
+
+    if not baseline:
+        return jsonify({'error': f'No forecast data available for "{matched}".'}), 404
+
+    # Apply the scenario formula
+    policy_factor = 1.0 - (policy_reduction / 100.0)
+    gdp_factor    = 1.0 + (gdp_growth / 200.0)
+    scenario = [
+        round(float(v) * policy_factor * gdp_factor, 3)
+        if v is not None else None
+        for v in baseline
+    ]
+
+    # Projected savings (positive = emissions reduced)
+    baseline_sum = sum(v for v in baseline  if v is not None)
+    scenario_sum = sum(v for v in scenario  if v is not None)
+    savings      = round(baseline_sum - scenario_sum, 2)
+
+    return jsonify({
+        'country':           matched,
+        'forecast_years':    fc_years,
+        'baseline_forecast': baseline,
+        'scenario_forecast': scenario,
+        'projected_savings': savings,
+        'params': {
+            'gdp_growth':       gdp_growth,
+            'policy_reduction': policy_reduction,
+            'energy_mix_shift': energy_mix_shift,
+        },
+    })
 
 
 # ── Run ────────────────────────────────────────────────────────────────────────
